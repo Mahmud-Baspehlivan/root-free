@@ -28,6 +28,7 @@ RootFree works the other way around. Everything runs in your browser. Nothing is
 
 **Viewing your tree**
 - Tree view — freeform canvas with relationship lines
+- Drag empty space to pan; pinch or Ctrl/⌘ + scroll to zoom around the pointer (two-finger pinch on phones and tablets)
 - Generations view — automatically groups family by generation, from great-grandparents down to grandchildren
 - People view — alphabetical table of everyone in the tree
 
@@ -125,7 +126,7 @@ For significant changes, open an issue first so we can discuss the approach.
 | Chrome / Edge | Full support |
 | Firefox | Full support |
 | Safari | Full support |
-| Mobile | Usable — drag not yet optimised for touch |
+| Mobile | Usable — pinch to zoom; card drag not yet optimised for touch |
 
 ---
 
