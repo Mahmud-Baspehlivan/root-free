@@ -3427,11 +3427,50 @@
           const [l, r] = b.members.map(side);
           if (l !== null && r !== null && l > r) b.members.reverse();
         };
+        // Siblings stay together in a row: each block belongs to the family it
+        // comes from (the parent block with the most children when its members
+        // come from several), and families are ordered as a whole, so one
+        // family's children are never split by a cousin.
+        const byId = new Map(rows.flat().map((b) => [b.id, b]));
+        const familyOf = new Map(
+          rows.flat().map((b) => {
+            const parentsOf = [...b.incoming]
+              .map((id) => byId.get(id))
+              .filter(Boolean);
+            const fam = parentsOf.length
+              ? parentsOf.reduce((best, p) =>
+                  p.outgoing.size > best.outgoing.size ? p : best,
+                )
+              : b;
+            return [b, fam];
+          }),
+        );
         // Move blocks toward their targets without overlapping: a left-to-right
         // and a right-to-left placement, averaged, keeps clusters centred.
         const placeRow = (row, pull) => {
           const want = row.map((b) => ({ b, x: b.x + pull(b) }));
-          want.sort((p, q) => p.x + width(p.b) / 2 - (q.x + width(q.b) / 2));
+          const centre = (w) => w.x + width(w.b) / 2;
+          const families = new Map();
+          want.forEach((w) => {
+            const f = familyOf.get(w.b);
+            if (!families.has(f)) families.set(f, []);
+            families.get(f).push(w);
+          });
+          const key = new Map(),
+            famNo = new Map();
+          [...families.values()].forEach((ws, i) => {
+            const k = avg(ws.map(centre));
+            ws.forEach((w) => {
+              key.set(w, k);
+              famNo.set(w, i);
+            });
+          });
+          want.sort(
+            (p, q) =>
+              key.get(p) - key.get(q) ||
+              famNo.get(p) - famNo.get(q) ||
+              centre(p) - centre(q),
+          );
           const lx = [],
             rx = [];
           want.forEach((w, i) => {
