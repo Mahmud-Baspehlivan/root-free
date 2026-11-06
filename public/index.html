@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RootFree — Family Tree</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- HEADER -->
+      <header class="header">
+        <div class="logo">
+          <div class="logo-mark">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8 14 Q8 9 5 6"
+                stroke="white"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+              <path
+                d="M8 14 Q8 9 11 6"
+                stroke="white"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+              <path
+                d="M8 10.5 Q6 8 3.5 7.5"
+                stroke="white"
+                stroke-width="1.1"
+                stroke-linecap="round"
+              />
+              <path
+                d="M8 10.5 Q10 8 12.5 7.5"
+                stroke="white"
+                stroke-width="1.1"
+                stroke-linecap="round"
+              />
+              <circle cx="5" cy="6" r="1.8" fill="white" />
+              <circle cx="11" cy="6" r="1.8" fill="white" />
+              <circle cx="3.5" cy="7.5" r="1.3" fill="rgba(255,255,255,.7)" />
+              <circle cx="12.5" cy="7.5" r="1.3" fill="rgba(255,255,255,.7)" />
+              <path
+                d="M8 15.5 L8 13"
+                stroke="white"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <span class="logo-name"
+            >RootFree<span class="logo-version"> v3</span></span
+          >
+        </div>
+
+        <div class="header-center">
+          <button
+            class="view-tab active"
+            id="tab-canvas"
+            onclick="switchView('canvas')"
+          >
+            Tree
+          </button>
+          <button class="view-tab" id="tab-gen" onclick="switchView('gen')">
+            Generations
+          </button>
+          <button class="view-tab" id="tab-list" onclick="switchView('list')">
+            People
+          </button>
+        </div>
+
+        <div class="header-right">
+          <button class="btn btn-share" onclick="openShareModal()">
+            Share Tree
+          </button>
+          <button class="btn" onclick="openGedcomImport()">
+            Import GEDCOM
+          </button>
+          <button class="btn" onclick="exportGedcom()">Export GEDCOM</button>
+          <button class="btn" onclick="exportJson()">Backup</button>
+          <button class="btn" onclick="importJson()">Restore</button>
+          <button class="btn btn-danger" onclick="confirmDeleteAll()">
+            Delete All
+          </button>
+          <button
+            class="dark-toggle"
+            id="dark-toggle"
+            onclick="toggleDark()"
+            title="Toggle dark mode"
+          >
+            ◐
+          </button>
+        </div>
+      </header>
+
+      <!-- SYNC BAR -->
+      <div class="sync-bar" id="sync-bar">
+        <div class="sync-indicator">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="sync-status-text">Connecting…</span>
+          <div class="sync-peers" id="sync-peers"></div>
+        </div>
+        <div class="sync-right">
+          <span class="sync-badge" id="sync-badge"></span>
+          <button class="btn-end-session" onclick="stopSession()">
+            End session
+          </button>
+        </div>
+      </div>
+
+      <!-- CANVAS VIEW -->
+      <div class="canvas-wrap" id="view-canvas">
+        <div id="zoom-box">
+        <div id="tree-canvas">
+          <div class="welcome" id="welcome-msg">
+            <div class="welcome-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2d6a4f"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              >
+                <path d="M12 22 Q12 14 7 9" />
+                <path d="M12 22 Q12 14 17 9" />
+                <path d="M12 16 Q9 12 4 11" />
+                <path d="M12 16 Q15 12 20 11" />
+                <circle cx="7" cy="9" r="2.5" fill="#2d6a4f" stroke="none" />
+                <circle cx="17" cy="9" r="2.5" fill="#2d6a4f" stroke="none" />
+                <circle cx="4" cy="11" r="1.8" fill="#4a9070" stroke="none" />
+                <circle cx="20" cy="11" r="1.8" fill="#4a9070" stroke="none" />
+              </svg>
+            </div>
+            <h2>Start your family tree</h2>
+            <p>
+              Add your first person using the button below. No account required.
+            </p>
+          </div>
+          <svg id="connector-svg"></svg>
+        </div>
+        </div>
+      </div>
+
+      <!-- GENERATION VIEW -->
+      <div class="canvas-wrap" id="view-gen">
+        <div class="gen-wrap" id="gen-content"></div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div class="canvas-wrap" id="view-list">
+        <div class="list-wrap">
+          <div class="list-header">
+            <span class="list-title">All People</span>
+            <span class="list-count" id="list-count"></span>
+          </div>
+          <div id="list-body"></div>
+        </div>
+      </div>
+    </div>
+    <!-- .app -->
+
+    <!-- TOOLBAR -->
+    <div class="toolbar" id="main-toolbar">
+      <button class="tb-btn primary" id="tb-add" onclick="openAddPerson()">
+        Add Person
+      </button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="genLayout()">Generation Layout</button>
+      <button class="tb-btn" onclick="gridLayout()">Grid</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="zoomIn()">+</button>
+      <button class="tb-btn" onclick="zoomOut()">−</button>
+      <button class="tb-btn" onclick="resetZoom()">Reset</button>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="legend" id="main-legend">
+      <div class="legend-title">Connections</div>
+      <div class="legend-row">
+        <div class="legend-line" style="background: #2d6a4f"></div>
+        <span>Parent / Child</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background: #b07d3a"></div>
+        <span>Partner</span>
+      </div>
+      <div class="legend-row">
+        <div
+          class="legend-line"
+          style="background: #6b4fa0; opacity: 0.7"
+        ></div>
+        <span>Sibling</span>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- JOIN SCREEN -->
+    <div class="join-screen" id="join-screen">
+      <div class="join-card">
+        <div class="join-spinner" id="join-spinner"></div>
+        <h2 id="join-title">Connecting…</h2>
+        <p id="join-desc">
+          Establishing a direct peer-to-peer connection. No server sees your
+          family data.
+        </p>
+        <div id="join-actions" style="display: none; margin-top: 20px">
+          <button
+            class="btn btn-primary"
+            style="width: 100%; padding: 10px; font-size: 13px"
+            onclick="dismissJoin()"
+          >
+            Open Tree
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+     MODALS
+════════════════════════════════ -->
+
+    <!-- ADD / EDIT PERSON -->
+    <div class="modal-overlay" id="modal-add" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="modal-add-title">Add Person</h2>
+          <button class="modal-close" onclick="closeModal('modal-add')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Photo</label>
+            <div
+              class="photo-zone"
+              id="photo-zone"
+              onclick="triggerPhotoUpload()"
+            >
+              <input
+                type="file"
+                id="photo-file-input"
+                accept="image/*"
+                onchange="handlePhotoUpload(event)"
+              />
+              <img id="photo-preview" style="display: none" alt="Preview" />
+              <div id="photo-placeholder">
+                <div class="photo-zone-hint">
+                  Click to upload a photo &mdash;
+                  <strong>stored locally only</strong>
+                </div>
+              </div>
+              <div id="photo-remove" style="display: none; margin-top: 6px">
+                <button
+                  onclick="removePhoto(event)"
+                  style="
+                    font-size: 11px;
+                    color: var(--danger);
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-family: inherit;
+                  "
+                >
+                  Remove photo
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input class="form-input" id="f-first" placeholder="First name" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" id="f-last" placeholder="Last name" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Birth Year</label>
+              <input
+                class="form-input"
+                id="f-birth"
+                placeholder="e.g. 1945"
+                type="number"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Death Year</label>
+              <input
+                class="form-input"
+                id="f-death"
+                placeholder="If applicable"
+                type="number"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Gender</label>
+              <select class="form-select" id="f-gender">
+                <option value="unknown">Unknown</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Birthplace</label>
+              <input
+                class="form-input"
+                id="f-place"
+                placeholder="City, Country"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Occupation</label>
+            <input
+              class="form-input"
+              id="f-occ"
+              placeholder="e.g. Teacher, Farmer"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea
+              class="form-textarea"
+              id="f-notes"
+              placeholder="Any additional notes…"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
+          <button class="btn btn-primary" onclick="savePerson()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD RELATIONSHIP -->
+    <div class="modal-overlay" id="modal-rel" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Add Connection</h2>
+          <button class="modal-close" onclick="closeModal('modal-rel')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Relationship type</label>
+            <div class="rel-grid">
+              <button
+                class="rel-option selected"
+                data-rel="parent"
+                onclick="selectRelType(this)"
+              >
+                <div class="rel-option-title">Parent of</div>
+                <div class="rel-option-sub">This person is a parent</div>
+              </button>
+              <button
+                class="rel-option"
+                data-rel="child"
+                onclick="selectRelType(this)"
+              >
+                <div class="rel-option-title">Child of</div>
+                <div class="rel-option-sub">This person is a child</div>
+              </button>
+              <button
+                class="rel-option"
+                data-rel="partner"
+                onclick="selectRelType(this)"
+              >
+                <div class="rel-option-title">Partner of</div>
+                <div class="rel-option-sub">Spouse or partner</div>
+              </button>
+              <button
+                class="rel-option"
+                data-rel="sibling"
+                onclick="selectRelType(this)"
+              >
+                <div class="rel-option-title">Sibling of</div>
+                <div class="rel-option-sub">Brother or sister</div>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Connect to</label>
+            <div class="person-pick-list" id="person-pick-list"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-rel')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveRelationship()">
+            Connect
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW PERSON -->
+    <div class="modal-overlay" id="modal-view" style="display: none">
+      <div class="modal">
+        <div class="modal-header" id="view-header">
+          <h2 id="view-name">Person</h2>
+          <button class="modal-close" onclick="closeModal('modal-view')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body" id="view-body"></div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" id="view-delete-btn">Delete</button>
+          <button class="btn" onclick="closeModal('modal-view')">Close</button>
+          <button class="btn btn-primary" id="view-edit-btn">Edit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE ALL -->
+    <div class="modal-overlay" id="modal-delete" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Delete All Data</h2>
+          <button class="modal-close" onclick="closeModal('modal-delete')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <p
+            style="
+              font-size: 13px;
+              line-height: 1.7;
+              color: var(--text);
+              margin-bottom: 10px;
+            "
+          >
+            This will permanently erase all people, photos, relationships, and
+            notes. This action cannot be undone.
+          </p>
+          <p style="font-size: 12px; color: var(--text-light)">
+            Consider exporting a backup before proceeding.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-delete')">
+            Cancel
+          </button>
+          <button
+            class="btn"
+            onclick="
+              exportJson();
+              closeModal('modal-delete');
+            "
+          >
+            Export first
+          </button>
+          <button class="btn btn-danger" onclick="deleteAllData()">
+            Delete Everything
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GEDCOM IMPORT -->
+    <div class="modal-overlay" id="modal-gedcom" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Import GEDCOM</h2>
+          <button class="modal-close" onclick="closeModal('modal-gedcom')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="info-box">
+            GEDCOM (.ged) is the standard family tree format used by Ancestry,
+            MyHeritage, FamilySearch, and most genealogy apps. Export from any
+            of those and import here.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Select .ged file</label>
+            <input
+              class="form-input"
+              type="file"
+              id="gedcom-file"
+              accept=".ged,.GED,.gedcom"
+              style="background: var(--surface)"
+            />
+          </div>
+          <div
+            id="gedcom-preview"
+            style="
+              display: none;
+              font-size: 12px;
+              color: var(--green);
+              font-weight: 600;
+              margin-top: 8px;
+            "
+          ></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-gedcom')">
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="doGedcomImport()">
+            Import
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHARE -->
+    <div class="modal-overlay" id="modal-share" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Share Tree</h2>
+          <button class="modal-close" onclick="closeModal('modal-share')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="info-box">
+            Your family data travels directly between browsers — peer-to-peer.
+            No server ever sees the content. The session ends when everyone
+            closes the tab.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access level</label>
+            <div class="share-mode-grid">
+              <button
+                class="share-mode-opt selected"
+                id="mode-edit-btn"
+                onclick="selectShareMode('edit')"
+              >
+                <div class="share-mode-opt-title">Can edit</div>
+                <div class="share-mode-opt-sub">
+                  Guests can add, edit and remove people
+                </div>
+              </button>
+              <button
+                class="share-mode-opt"
+                id="mode-view-btn"
+                onclick="selectShareMode('view')"
+              >
+                <div class="share-mode-opt-title">View only</div>
+                <div class="share-mode-opt-sub">
+                  Guests can browse but not make changes
+                </div>
+              </button>
+            </div>
+          </div>
+          <div id="share-link-section" style="display: none">
+            <label class="form-label">Share this link</label>
+            <div class="share-link-display" id="share-link-display"></div>
+            <button
+              class="btn btn-primary"
+              style="width: 100%"
+              onclick="copyShareLink()"
+            >
+              Copy Link
+            </button>
+            <div class="warning-box">
+              Anyone with this link can
+              <span id="share-mode-warn">edit</span> your tree while this
+              session is active. Only share with people you trust.
+            </div>
+          </div>
+          <div id="share-generate-section">
+            <button
+              class="btn btn-primary"
+              style="width: 100%; padding: 10px; font-size: 13px"
+              onclick="startSession()"
+            >
+              Generate Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/share.js"></script>
+    <script src="js/tree-view.js"></script>
+    <script src="js/connectors.js"></script>
+    <script src="js/canvas-nav.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/people.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
