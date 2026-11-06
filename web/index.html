@@ -68,32 +68,35 @@
             class="view-tab active"
             id="tab-canvas"
             data-action="switchView" data-view="canvas"
-          >
+           data-i18n="tabTree">
             Tree
           </button>
-          <button class="view-tab" id="tab-gen" data-action="switchView" data-view="gen">
+          <button class="view-tab" id="tab-gen" data-action="switchView" data-view="gen" data-i18n="tabGen">
             Generations
           </button>
-          <button class="view-tab" id="tab-list" data-action="switchView" data-view="list">
+          <button class="view-tab" id="tab-list" data-action="switchView" data-view="list" data-i18n="tabPeople">
             People
           </button>
         </div>
 
-        <div class="header-right">
-          <button class="btn" data-action="openGedcomImport">
+        <button class="menu-toggle" id="menu-toggle" data-action="toggleMenu" data-i18n-title="menu" title="Menu" aria-expanded="false">☰</button>
+
+        <div class="header-right" id="header-menu">
+          <button class="btn" data-action="openGedcomImport" data-i18n="importGedcom">
             Import GEDCOM
           </button>
-          <button class="btn" data-action="exportGedcom">Export GEDCOM</button>
-          <button class="btn" data-action="exportJson">Backup</button>
-          <button class="btn" data-action="importJson">Restore</button>
-          <button class="btn btn-danger" data-action="confirmDeleteAll">
+          <button class="btn" data-action="exportGedcom" data-i18n="exportGedcom">Export GEDCOM</button>
+          <button class="btn" data-action="exportJson" data-i18n="backup">Backup</button>
+          <button class="btn" data-action="importJson" data-i18n="restore">Restore</button>
+          <button class="btn btn-danger" data-action="confirmDeleteAll" data-i18n="deleteAll">
             Delete All
           </button>
+          <button class="btn lang-toggle" data-action="toggleLang" data-i18n="otherLang">Türkçe</button>
           <button
             class="dark-toggle"
             id="dark-toggle"
             data-action="toggleDark"
-            title="Toggle dark mode"
+            title="Toggle dark mode" data-i18n-title="darkMode"
           >
             ◐
           </button>
@@ -123,8 +126,8 @@
                 <circle cx="20" cy="11" r="1.8" fill="#4a9070" stroke="none" />
               </svg>
             </div>
-            <h2>Start your family tree</h2>
-            <p>
+            <h2 data-i18n="welcomeTitle">Start your family tree</h2>
+            <p data-i18n="welcomeText">
               Add your first person using the button below. No account required.
             </p>
           </div>
@@ -142,7 +145,7 @@
       <div class="canvas-wrap" id="view-list">
         <div class="list-wrap">
           <div class="list-header">
-            <span class="list-title">All People</span>
+            <span class="list-title" data-i18n="allPeople">All People</span>
             <span class="list-count" id="list-count"></span>
           </div>
           <div id="list-body"></div>
@@ -153,35 +156,35 @@
 
     <!-- TOOLBAR -->
     <div class="toolbar" id="main-toolbar">
-      <button class="tb-btn primary" id="tb-add" data-action="openAddPerson">
+      <button class="tb-btn primary" id="tb-add" data-action="openAddPerson" data-i18n="addPerson">
         Add Person
       </button>
       <div class="tb-sep"></div>
-      <button class="tb-btn" data-action="genLayout">Generation Layout</button>
-      <button class="tb-btn" data-action="gridLayout">Grid</button>
+      <button class="tb-btn" data-action="genLayout" data-i18n="genLayout">Generation Layout</button>
+      <button class="tb-btn" data-action="gridLayout" data-i18n="grid">Grid</button>
       <div class="tb-sep"></div>
       <button class="tb-btn" data-action="zoomIn">+</button>
       <button class="tb-btn" data-action="zoomOut">−</button>
-      <button class="tb-btn" data-action="resetZoom">Reset</button>
+      <button class="tb-btn" data-action="resetZoom" data-i18n="zoomReset">Reset</button>
     </div>
 
     <!-- LEGEND -->
     <div class="legend" id="main-legend">
-      <div class="legend-title">Connections</div>
+      <div class="legend-title" data-i18n="legendTitle">Connections</div>
       <div class="legend-row">
         <div class="legend-line" style="background: #2d6a4f"></div>
-        <span>Parent / Child</span>
+        <span data-i18n="legendParent">Parent / Child</span>
       </div>
       <div class="legend-row">
         <div class="legend-line" style="background: #b07d3a"></div>
-        <span>Partner</span>
+        <span data-i18n="legendPartner">Partner</span>
       </div>
       <div class="legend-row">
         <div
           class="legend-line"
           style="background: #6b4fa0; opacity: 0.7"
         ></div>
-        <span>Sibling</span>
+        <span data-i18n="legendSibling">Sibling</span>
       </div>
     </div>
 
@@ -196,14 +199,14 @@
     <div class="modal-overlay" id="modal-add" style="display: none">
       <div class="modal">
         <div class="modal-header">
-          <h2 id="modal-add-title">Add Person</h2>
+          <h2 id="modal-add-title" data-i18n="addPerson">Add Person</h2>
           <button class="modal-close" data-action="closeModal" data-modal="modal-add">
             ✕
           </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Photo</label>
+            <label class="form-label" data-i18n="photo">Photo</label>
             <div
               class="photo-zone"
               id="photo-zone"
@@ -217,7 +220,7 @@
               />
               <img id="photo-preview" style="display: none" alt="Preview" />
               <div id="photo-placeholder">
-                <div class="photo-zone-hint">
+                <div class="photo-zone-hint" data-i18n="photoHint">
                   Click to upload a photo
                 </div>
               </div>
@@ -232,7 +235,7 @@
                     cursor: pointer;
                     font-family: inherit;
                   "
-                >
+                 data-i18n="removePhoto">
                   Remove photo
                 </button>
               </div>
@@ -240,73 +243,73 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">First Name</label>
-              <input class="form-input" id="f-first" placeholder="First name" />
+              <label class="form-label" data-i18n="firstName">First Name</label>
+              <input class="form-input" id="f-first" placeholder="First name" data-i18n-placeholder="firstName" />
             </div>
             <div class="form-group">
-              <label class="form-label">Last Name</label>
-              <input class="form-input" id="f-last" placeholder="Last name" />
+              <label class="form-label" data-i18n="lastName">Last Name</label>
+              <input class="form-input" id="f-last" placeholder="Last name" data-i18n-placeholder="lastName" />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Birth Year</label>
+              <label class="form-label" data-i18n="birthYear">Birth Year</label>
               <input
                 class="form-input"
                 id="f-birth"
-                placeholder="e.g. 1945"
+                placeholder="e.g. 1945" data-i18n-placeholder="birthYearPh"
                 type="number"
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Death Year</label>
+              <label class="form-label" data-i18n="deathYear">Death Year</label>
               <input
                 class="form-input"
                 id="f-death"
-                placeholder="If applicable"
+                placeholder="If applicable" data-i18n-placeholder="deathYearPh"
                 type="number"
               />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Gender</label>
+              <label class="form-label" data-i18n="gender">Gender</label>
               <select class="form-select" id="f-gender">
-                <option value="unknown">Unknown</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="unknown" data-i18n="genderUnknown">Unknown</option>
+                <option value="male" data-i18n="genderMale">Male</option>
+                <option value="female" data-i18n="genderFemale">Female</option>
+                <option value="other" data-i18n="genderOther">Other</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Birthplace</label>
+              <label class="form-label" data-i18n="birthplace">Birthplace</label>
               <input
                 class="form-input"
                 id="f-place"
-                placeholder="City, Country"
+                placeholder="City, Country" data-i18n-placeholder="birthplacePh"
               />
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Occupation</label>
+            <label class="form-label" data-i18n="occupation">Occupation</label>
             <input
               class="form-input"
               id="f-occ"
-              placeholder="e.g. Teacher, Farmer"
+              placeholder="e.g. Teacher, Farmer" data-i18n-placeholder="occupationPh"
             />
           </div>
           <div class="form-group">
-            <label class="form-label">Notes</label>
+            <label class="form-label" data-i18n="notes">Notes</label>
             <textarea
               class="form-textarea"
               id="f-notes"
-              placeholder="Any additional notes…"
+              placeholder="Any additional notes…" data-i18n-placeholder="notesPh"
             ></textarea>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn" data-action="closeModal" data-modal="modal-add">Cancel</button>
-          <button class="btn btn-primary" data-action="savePerson">Save</button>
+          <button class="btn" data-action="closeModal" data-modal="modal-add" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" data-action="savePerson" data-i18n="save">Save</button>
         </div>
       </div>
     </div>
@@ -315,57 +318,57 @@
     <div class="modal-overlay" id="modal-rel" style="display: none">
       <div class="modal">
         <div class="modal-header">
-          <h2>Add Connection</h2>
+          <h2 data-i18n="addConnection">Add Connection</h2>
           <button class="modal-close" data-action="closeModal" data-modal="modal-rel">
             ✕
           </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Relationship type</label>
+            <label class="form-label" data-i18n="relType">Relationship type</label>
             <div class="rel-grid">
               <button
                 class="rel-option selected"
                 data-rel="parent"
                 data-action="selectRelType"
               >
-                <div class="rel-option-title">Parent of</div>
-                <div class="rel-option-sub">This person is a parent</div>
+                <div class="rel-option-title" data-i18n="parentOf">Parent of</div>
+                <div class="rel-option-sub" data-i18n="parentOfSub">This person is a parent</div>
               </button>
               <button
                 class="rel-option"
                 data-rel="child"
                 data-action="selectRelType"
               >
-                <div class="rel-option-title">Child of</div>
-                <div class="rel-option-sub">This person is a child</div>
+                <div class="rel-option-title" data-i18n="childOf">Child of</div>
+                <div class="rel-option-sub" data-i18n="childOfSub">This person is a child</div>
               </button>
               <button
                 class="rel-option"
                 data-rel="partner"
                 data-action="selectRelType"
               >
-                <div class="rel-option-title">Partner of</div>
-                <div class="rel-option-sub">Spouse or partner</div>
+                <div class="rel-option-title" data-i18n="partnerOf">Partner of</div>
+                <div class="rel-option-sub" data-i18n="partnerOfSub">Spouse or partner</div>
               </button>
               <button
                 class="rel-option"
                 data-rel="sibling"
                 data-action="selectRelType"
               >
-                <div class="rel-option-title">Sibling of</div>
-                <div class="rel-option-sub">Brother or sister</div>
+                <div class="rel-option-title" data-i18n="siblingOf">Sibling of</div>
+                <div class="rel-option-sub" data-i18n="siblingOfSub">Brother or sister</div>
               </button>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Connect to</label>
+            <label class="form-label" data-i18n="connectTo">Connect to</label>
             <div class="person-pick-list" id="person-pick-list"></div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn" data-action="closeModal" data-modal="modal-rel">Cancel</button>
-          <button class="btn btn-primary" data-action="saveRelationship">
+          <button class="btn" data-action="closeModal" data-modal="modal-rel" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" data-action="saveRelationship" data-i18n="connect">
             Connect
           </button>
         </div>
@@ -376,63 +379,63 @@
     <div class="modal-overlay" id="modal-relative" style="display: none">
       <div class="modal">
         <div class="modal-header">
-          <h2 id="relative-title">Add a relative</h2>
+          <h2 id="relative-title" data-i18n="addRelative">Add a relative</h2>
           <button class="modal-close" data-action="closeModal" data-modal="modal-relative">
             ✕
           </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Who are you adding?</label>
+            <label class="form-label" data-i18n="whoAdding">Who are you adding?</label>
             <div class="relation-grid">
-              <button class="relation-option" data-action="pickRelation" data-relation="father">Father</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="mother">Mother</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="spouse">Spouse</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="son">Son</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="daughter">Daughter</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="brother">Brother</button>
-              <button class="relation-option" data-action="pickRelation" data-relation="sister">Sister</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="father" data-i18n="father">Father</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="mother" data-i18n="mother">Mother</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="spouse" data-i18n="spouse">Spouse</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="son" data-i18n="son">Son</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="daughter" data-i18n="daughter">Daughter</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="brother" data-i18n="brother">Brother</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="sister" data-i18n="sister">Sister</button>
             </div>
           </div>
           <div id="relative-form" style="display: none">
             <div class="form-group" id="relative-other-group" style="display: none">
-              <label class="form-label" for="relative-other">Other parent</label>
+              <label class="form-label" for="relative-other" data-i18n="otherParent">Other parent</label>
               <select class="form-select" id="relative-other"></select>
             </div>
             <div class="form-group">
-              <label class="form-label" id="relative-first-label" for="relative-first">First name</label>
+              <label class="form-label" id="relative-first-label" for="relative-first" data-i18n="firstName">First name</label>
               <input class="form-input" id="relative-first" autocomplete="off" />
-              <div class="form-hint" id="relative-names-hint">
+              <div class="form-hint" id="relative-names-hint" data-i18n="namesHint">
                 Separate names with commas to add several at once.
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="relative-last">Last name</label>
-                <input class="form-input" id="relative-last" placeholder="Last name" autocomplete="off" />
+                <label class="form-label" for="relative-last" data-i18n="lastName">Last name</label>
+                <input class="form-input" id="relative-last" placeholder="Last name" data-i18n-placeholder="lastName" autocomplete="off" />
               </div>
               <div class="form-group">
-                <label class="form-label" for="relative-birth">Birth year</label>
-                <input class="form-input" id="relative-birth" placeholder="Optional" type="number" />
+                <label class="form-label" for="relative-birth" data-i18n="birthYear">Birth year</label>
+                <input class="form-input" id="relative-birth" placeholder="Optional" data-i18n-placeholder="optional" type="number" />
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="relative-gender">Gender</label>
+              <label class="form-label" for="relative-gender" data-i18n="gender">Gender</label>
               <select class="form-select" id="relative-gender">
-                <option value="unknown">Unknown</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="unknown" data-i18n="genderUnknown">Unknown</option>
+                <option value="male" data-i18n="genderMale">Male</option>
+                <option value="female" data-i18n="genderFemale">Female</option>
+                <option value="other" data-i18n="genderOther">Other</option>
               </select>
             </div>
-            <div class="form-hint">
+            <div class="form-hint" data-i18n="moreLater">
               More details (place, notes, photo) can be added later with Edit.
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn" data-action="closeModal" data-modal="modal-relative">Cancel</button>
-          <button class="btn btn-primary" data-action="saveRelatives">Add</button>
+          <button class="btn" data-action="closeModal" data-modal="modal-relative" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" data-action="saveRelatives" data-i18n="add">Add</button>
         </div>
       </div>
     </div>
@@ -448,10 +451,10 @@
         </div>
         <div class="modal-body" id="view-body"></div>
         <div class="modal-footer">
-          <button class="btn btn-danger" id="view-delete-btn">Delete</button>
-          <button class="btn" data-action="closeModal" data-modal="modal-view">Close</button>
-          <button class="btn" id="view-relative-btn">+ Relative</button>
-          <button class="btn btn-primary" id="view-edit-btn">Edit</button>
+          <button class="btn btn-danger" id="view-delete-btn" data-i18n="delete">Delete</button>
+          <button class="btn" data-action="closeModal" data-modal="modal-view" data-i18n="close">Close</button>
+          <button class="btn" id="view-relative-btn" data-i18n="plusRelative">+ Relative</button>
+          <button class="btn btn-primary" id="view-edit-btn" data-i18n="edit">Edit</button>
         </div>
       </div>
     </div>
@@ -460,7 +463,7 @@
     <div class="modal-overlay" id="modal-delete" style="display: none">
       <div class="modal">
         <div class="modal-header">
-          <h2>Delete All Data</h2>
+          <h2 data-i18n="deleteAllTitle">Delete All Data</h2>
           <button class="modal-close" data-action="closeModal" data-modal="modal-delete">
             ✕
           </button>
@@ -473,25 +476,25 @@
               color: var(--text);
               margin-bottom: 10px;
             "
-          >
+           data-i18n="deleteAllText">
             This will permanently erase all people, photos, relationships, and
             notes. This action cannot be undone.
           </p>
-          <p style="font-size: 12px; color: var(--text-light)">
+          <p style="font-size: 12px; color: var(--text-light)" data-i18n="deleteAllHint">
             Consider exporting a backup before proceeding.
           </p>
         </div>
         <div class="modal-footer">
-          <button class="btn" data-action="closeModal" data-modal="modal-delete">
+          <button class="btn" data-action="closeModal" data-modal="modal-delete" data-i18n="cancel">
             Cancel
           </button>
           <button
             class="btn"
             data-action="exportFirst"
-          >
+           data-i18n="exportFirst">
             Export first
           </button>
-          <button class="btn btn-danger" data-action="deleteAllData">
+          <button class="btn btn-danger" data-action="deleteAllData" data-i18n="deleteEverything">
             Delete Everything
           </button>
         </div>
@@ -502,19 +505,19 @@
     <div class="modal-overlay" id="modal-gedcom" style="display: none">
       <div class="modal">
         <div class="modal-header">
-          <h2>Import GEDCOM</h2>
+          <h2 data-i18n="importGedcom">Import GEDCOM</h2>
           <button class="modal-close" data-action="closeModal" data-modal="modal-gedcom">
             ✕
           </button>
         </div>
         <div class="modal-body">
-          <div class="info-box">
+          <div class="info-box" data-i18n="gedcomInfo">
             GEDCOM (.ged) is the standard family tree format used by Ancestry,
             MyHeritage, FamilySearch, and most genealogy apps. Export from any
             of those and import here.
           </div>
           <div class="form-group">
-            <label class="form-label">Select .ged file</label>
+            <label class="form-label" data-i18n="selectGed">Select .ged file</label>
             <input
               class="form-input"
               type="file"
@@ -535,10 +538,10 @@
           ></div>
         </div>
         <div class="modal-footer">
-          <button class="btn" data-action="closeModal" data-modal="modal-gedcom">
+          <button class="btn" data-action="closeModal" data-modal="modal-gedcom" data-i18n="cancel">
             Cancel
           </button>
-          <button class="btn btn-primary" data-action="doGedcomImport">
+          <button class="btn btn-primary" data-action="doGedcomImport" data-i18n="import">
             Import
           </button>
         </div>

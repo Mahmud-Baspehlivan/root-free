@@ -1,5 +1,6 @@
 // Lines between the person cards: partners, siblings, and parent → children.
 
+import { t } from "./i18n.ts";
 import { marriageInfo, marriageLabel } from "./layout.ts";
 import { el, state } from "./state.ts";
 import type { Person } from "./types.ts";
@@ -113,7 +114,7 @@ export function drawConnectors(): void {
         b = state.people[rel.b];
       if (!a || !b) return;
       const no = marriageNo(rel.a, rel.b);
-      const text = no ? marriageLabel(no) : "partner";
+      const text = no ? marriageLabel(no) : t("linePartner");
       const left = a.x <= b.x ? a : b;
       const right = left === a ? b : a;
       const closeAndAligned =
@@ -144,7 +145,7 @@ export function drawConnectors(): void {
         b = state.people[rel.b];
       if (!a || !b) return;
       bez(cx(a), mid(a), cx(b), mid(b), SIBLING, "4 3");
-      lbl((cx(a) + cx(b)) / 2, (mid(a) + mid(b)) / 2 - 8, "sibling", SIBLING);
+      lbl((cx(a) + cx(b)) / 2, (mid(a) + mid(b)) / 2 - 8, t("lineSibling"), SIBLING);
     });
 
   // Children grouped by their exact set of parents.
@@ -317,6 +318,6 @@ export function drawConnectors(): void {
     if (barMaxX > barMinX) seg(barMinX, chiBarY, barMaxX, chiBarY, GREEN);
 
     children.forEach((c) => seg(cx(c), chiBarY, cx(c), top(c), GREEN));
-    lbl((chiMinX + chiMaxX) / 2, chiBarY - 6, "child", GREEN);
+    lbl((chiMinX + chiMaxX) / 2, chiBarY - 6, t("lineChild"), GREEN);
   }
 }

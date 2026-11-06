@@ -2,6 +2,7 @@
 
 import { applyZoom } from "./canvas-nav.ts";
 import { drawConnectors } from "./connectors.ts";
+import { t } from "./i18n.ts";
 import { marriageInfo } from "./layout.ts";
 import { el, esc, fullName, gClass, lifespan, personSVG, photoSrc, state, ui } from "./state.ts";
 import { saveState } from "./sync.ts";
@@ -39,21 +40,31 @@ export function render(): void {
       ? `<img class="card-photo" src="${esc(photo)}" alt="${esc(fullName(p))}">`
       : `<div class="card-photo-placeholder ${gc}">${personSVG(gc)}</div>`;
     card.innerHTML = `${photoHtml}${badge[id] ? `<span class="card-badge">${esc(badge[id])}</span>` : ""}
-<button class="card-add" data-action="openAddRelative" data-id="${esc(id)}" title="Add a relative" aria-label="Add a relative">+</button>
+<button class="card-add" data-action="openAddRelative" data-id="${esc(id)}" title="${esc(t("addRelative"))}" aria-label="${esc(t("addRelative"))}">+</button>
 <div class="card-body">
   <div class="card-name">${esc(fullName(p))}</div>
   <div class="card-life">${esc(lifespan(p)) || "&nbsp;"}</div>
   ${p.place ? `<div class="card-meta">${esc(p.place)}</div>` : ""}
 </div>
 <div class="card-footer">
-  <button class="card-action" data-action="viewPerson" data-id="${esc(id)}">View</button>
-  <button class="card-action primary" data-action="openAddRel" data-id="${esc(id)}">Connect</button>
+  <button class="card-action" data-action="viewPerson" data-id="${esc(id)}">${esc(t("view"))}</button>
+  <button class="card-action primary" data-action="openAddRel" data-id="${esc(id)}">${esc(t("connect"))}</button>
 </div>`;
     makeDraggable(card, id);
     canvas.appendChild(card);
   });
   updateCanvasSize();
   requestAnimationFrame(() => requestAnimationFrame(drawConnectors));
+}
+
+/** Scroll the canvas to the top row of the tree, so it is not opened on empty space. */
+export function revealTree(): void {
+  const people = Object.values(state.people);
+  if (!people.length) return;
+  const first = people.reduce((a, b) => ((b.y || 0) < (a.y || 0) || ((b.y || 0) === (a.y || 0) && (b.x || 0) < (a.x || 0)) ? b : a));
+  const wrap = el("view-canvas");
+  wrap.scrollLeft = Math.max(0, (first.x || 0) * ui.zoom - 24);
+  wrap.scrollTop = Math.max(0, (first.y || 0) * ui.zoom - 24);
 }
 
 export function updateCanvasSize(): void {

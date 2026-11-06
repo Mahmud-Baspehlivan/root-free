@@ -17,10 +17,18 @@ A family tree app for one family, shared by everyone who has the link. It starte
 - Generations are worked out per couple, so lines never skip a row or run behind cards
 - Remarriages: numbered marriages ("1. evlilik", "2. evlilik"), each marriage's children drawn from their own couple, a bridge over the row for a third spouse, and a half-sibling badge ("baba bir kardeş" / "anne bir kardeş")
 
+**Adding relatives**
+- "+" on any card (or "+ Relative" in a person's details) adds a father, mother, spouse, son, daughter, brother or sister and makes the connections at once
+- Several children or siblings in one go ("Hasan, Yusuf, Seher"); for someone married more than once it asks which marriage
+
 **Moving around**
 - Drag empty space to pan
 - Pinch, or Ctrl/⌘ + scroll, to zoom around the pointer; two-finger pinch on phones
 - Tree, Generations and People views
+- Works on phones: the header buttons fold into a ☰ menu and dialogs open from the bottom
+
+**Languages**
+- Turkish and English. A Turkish browser gets Turkish; the language button in the header switches and is remembered. Texts live in `web/src/i18n.ts`.
 
 **Shared data**
 - The tree lives on the server. Every change is saved straight away, and only the changed fields are sent, so two people editing different things never overwrite each other.

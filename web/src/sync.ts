@@ -7,9 +7,10 @@
 // relationships. Two people editing different parts of the tree therefore
 // never overwrite each other. Changes made by others show up on reload.
 
+import { t } from "./i18n.ts";
 import { replaceTree, showToast, state } from "./state.ts";
 import type { Person, Relationship, Tree } from "./types.ts";
-import { render } from "./tree-view.ts";
+import { render, revealTree } from "./tree-view.ts";
 
 const TEXT_FIELDS = ["first", "last", "birth", "death", "gender", "place", "occupation", "notes"] as const;
 const RETRY_MS = 5000;
@@ -34,9 +35,10 @@ export async function loadState(): Promise<void> {
     synced = copy(tree);
   } catch (e) {
     console.error(e);
-    showToast("Could not load the tree from the server. Reload the page to try again.", 8000);
+    showToast(t("loadFailed"), 8000);
   }
   render();
+  revealTree();
 }
 
 /** Send whatever changed since the last successful save. */
@@ -61,7 +63,7 @@ export function saveState(): void {
     })
     .catch((e) => {
       console.error(e);
-      showToast("Could not save — retrying in a few seconds", 4000);
+      showToast(t("saveFailed"), 4000);
       retryTimer = setTimeout(saveState, RETRY_MS);
     })
     .finally(() => {

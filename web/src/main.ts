@@ -17,10 +17,12 @@ import {
   triggerPhotoUpload,
   viewPerson,
 } from "./people.ts";
+import { applyStatic, lang, setLang } from "./i18n.ts";
 import { initRelatives, openAddRelative, pickRelation, saveRelatives } from "./relatives.ts";
-import { closeModal, el } from "./state.ts";
+import { closeModal, el, ui } from "./state.ts";
 import { hasUnsavedChanges, loadState } from "./sync.ts";
-import { switchView } from "./tree-view.ts";
+import { render, switchView } from "./tree-view.ts";
+import { renderGenView, renderListView } from "./views.ts";
 import type { RelType, View } from "./types.ts";
 
 // Buttons and links say what they do with data-action (and data-* arguments);
@@ -62,10 +64,14 @@ const actions: Record<string, (target: HTMLElement, event: MouseEvent) => void> 
   confirmDeleteAll,
   deleteAllData,
   toggleDark,
+  toggleLang,
+  toggleMenu: () => setMenu(!el("header-menu").classList.contains("open")),
 };
 
 document.addEventListener("click", (e) => {
   const target = (e.target as Element).closest<HTMLElement>("[data-action]");
+  // On small screens the header buttons live in a menu; any click closes it.
+  if (target?.dataset.action !== "toggleMenu") setMenu(false);
   if (!target) return;
   const action = actions[target.dataset.action!];
   if (!action) return;
@@ -78,6 +84,20 @@ el("photo-file-input").addEventListener("change", handlePhotoUpload);
 window.addEventListener("beforeunload", (e) => {
   if (hasUnsavedChanges()) e.preventDefault();
 });
+
+// ── Menu (small screens) and language ──
+
+function setMenu(open: boolean): void {
+  el("header-menu").classList.toggle("open", open);
+  el("menu-toggle").setAttribute("aria-expanded", String(open));
+}
+
+function toggleLang(): void {
+  setLang(lang() === "tr" ? "en" : "tr");
+  render();
+  if (ui.view === "gen") renderGenView();
+  if (ui.view === "list") renderListView();
+}
 
 // ── Dark mode ──
 
@@ -97,6 +117,7 @@ function initDark(): void {
   }
 }
 
+applyStatic();
 initDark();
 initRelatives();
 initCanvasPan();

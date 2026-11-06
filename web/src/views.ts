@@ -1,18 +1,10 @@
 // The Generations view and the People list.
 
+import { t, type Key } from "./i18n.ts";
 import { buildFamilyLayoutBlocks, marriageInfo } from "./layout.ts";
 import { el, esc, fullName, gClass, lifespan, personSVG, photoSrc, state } from "./state.ts";
 
-const GEN_LABELS = [
-  "Great-great-grandparents",
-  "Great-grandparents",
-  "Grandparents",
-  "Parents",
-  "You / Siblings",
-  "Children",
-  "Grandchildren",
-  "Great-grandchildren",
-];
+const GEN_LABELS: Key[] = ["gen0", "gen1", "gen2", "gen3", "gen4", "gen5", "gen6", "gen7"];
 
 export function renderGenView(): void {
   // Same generations as the tree's Generation Layout, with partners kept together.
@@ -22,7 +14,7 @@ export function renderGenView(): void {
   content.innerHTML = "";
   if (!Object.keys(state.people).length) {
     content.innerHTML =
-      '<div style="text-align:center;color:var(--text-light);padding:60px 0;font-size:13px">Add people in the Tree view first.</div>';
+      `<div style="text-align:center;color:var(--text-light);padding:60px 0;font-size:13px">${esc(t("addInTreeFirst"))}</div>`;
     return;
   }
   for (let g = 0; g <= maxGen; g++) {
@@ -35,7 +27,7 @@ export function renderGenView(): void {
     }
     const label = document.createElement("div");
     label.className = "gen-label";
-    label.textContent = GEN_LABELS[g] || "Generation " + (g + 1);
+    label.textContent = GEN_LABELS[g] ? t(GEN_LABELS[g]) : t("genN", { n: g + 1 });
     content.appendChild(label);
     const row = document.createElement("div");
     row.className = "gen-row";
@@ -64,10 +56,10 @@ export function renderGenView(): void {
 
 export function renderListView(): void {
   const ids = Object.keys(state.people);
-  el("list-count").textContent = ids.length + " " + (ids.length === 1 ? "person" : "people");
+  el("list-count").textContent = ids.length === 1 ? t("onePerson") : t("nPeople", { n: ids.length });
   if (!ids.length) {
     el("list-body").innerHTML =
-      '<div style="text-align:center;color:var(--text-light);padding:40px 0;font-size:13px">No people added yet.</div>';
+      `<div style="text-align:center;color:var(--text-light);padding:40px 0;font-size:13px">${esc(t("noPeople"))}</div>`;
     return;
   }
   const sorted = [...ids].sort((a, b) => fullName(state.people[a]).localeCompare(fullName(state.people[b])));
@@ -85,14 +77,14 @@ export function renderListView(): void {
     <td style="color:var(--text-mid)">${esc(lifespan(p)) || "—"}</td>
     <td style="color:var(--text-mid)">${esc(p.place) || "—"}</td>
     <td style="color:var(--text-mid)">${rels}</td>
-    <td><button data-action="viewPerson" data-id="${esc(id)}" class="btn" style="padding:4px 10px;font-size:11px">View</button></td>
+    <td><button data-action="viewPerson" data-id="${esc(id)}" class="btn" style="padding:4px 10px;font-size:11px">${esc(t("view"))}</button></td>
   </tr>`;
     })
     .join("");
   el("list-body").innerHTML = `
     <table class="data-table">
 <thead><tr>
-  <th>Name</th><th>Life</th><th>Place</th><th>Connections</th><th></th>
+  <th>${esc(t("colName"))}</th><th>${esc(t("colLife"))}</th><th>${esc(t("colPlace"))}</th><th>${esc(t("colConnections"))}</th><th></th>
 </tr></thead>
 <tbody>${rows}</tbody>
     </table>`;

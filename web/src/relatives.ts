@@ -1,6 +1,7 @@
 // "Add a relative": add people through someone already in the tree, so the
 // connections are made at the same time (see relatives-plan.ts).
 
+import { t, type Key } from "./i18n.ts";
 import { arrangeByGeneration, marriageInfo, marriageLabel } from "./layout.ts";
 import {
   MANY,
@@ -18,14 +19,15 @@ import { render } from "./tree-view.ts";
 import type { Gender } from "./types.ts";
 import { renderGenView, renderListView } from "./views.ts";
 
-const WORD: Record<Relation, [string, string]> = {
-  father: ["father", "father"],
-  mother: ["mother", "mother"],
-  spouse: ["spouse", "spouse"],
-  son: ["son", "sons"],
-  daughter: ["daughter", "daughters"],
-  brother: ["brother", "brothers"],
-  sister: ["sister", "sisters"],
+/** The relation as a word in the dialog title. */
+const WORD: Record<Relation, Key> = {
+  father: "w_father",
+  mother: "w_mother",
+  spouse: "w_spouse",
+  son: "w_son",
+  daughter: "w_daughter",
+  brother: "w_brother",
+  sister: "w_sister",
 };
 
 let personId: string | null = null;
@@ -53,7 +55,7 @@ export function openAddRelative(id: string): void {
   personId = id;
   relation = null;
   lastNameTouched = false;
-  el("relative-title").textContent = "Add a relative of " + fullName(p);
+  el("relative-title").textContent = t("addRelativeOf", { name: fullName(p) });
   names().value = "";
   lastName().value = "";
   el<HTMLInputElement>("relative-birth").value = "";
@@ -72,10 +74,10 @@ export function pickRelation(option: HTMLElement): void {
     .forEach((o) => o.classList.toggle("selected", o === option));
   const p = state.people[personId];
   const many = MANY.has(relation);
-  el("relative-title").textContent = `Add ${WORD[relation][many ? 1 : 0]} of ${fullName(p)}`;
+  el("relative-title").textContent = t("addWhatOf", { what: t(WORD[relation]), name: fullName(p) });
   el("relative-form").style.display = "block";
-  el("relative-first-label").textContent = many ? "First name(s)" : "First name";
-  names().placeholder = many ? "e.g. Hasan, Yusuf, Seher" : "First name";
+  el("relative-first-label").textContent = many ? t("firstNames") : t("firstName");
+  names().placeholder = many ? t("namesPh") : t("firstName");
   el("relative-names-hint").style.display = many ? "block" : "none";
   el<HTMLSelectElement>("relative-gender").value = defaultGender(state, personId, relation);
   fillOtherParent();
@@ -101,12 +103,12 @@ function fillOtherParent(): void {
     return o;
   };
   select.replaceChildren(
-    ...(partners.length > 1 ? [option("", "Choose…")] : []),
+    ...(partners.length > 1 ? [option("", t("choose"))] : []),
     ...partners.map((id) => {
       const no = numbers[[personId!, id].sort().join("|")];
       return option(id, fullName(state.people[id]) + (no ? ` (${marriageLabel(no)})` : ""));
     }),
-    option("none", "Someone else / unknown"),
+    option("none", t("someoneElse")),
   );
   select.value = defaultOtherParent(state, personId!) ?? "";
   group.style.display = "block";
@@ -125,17 +127,17 @@ function updateLastName(): void {
 export function saveRelatives(): void {
   if (!personId) return;
   if (!relation) {
-    alert("Choose how they are related.");
+    alert(t("chooseRelation"));
     return;
   }
   const list = splitNames(names().value, relation);
   if (!list.length) {
-    alert("Enter a name.");
+    alert(t("enterName"));
     names().focus();
     return;
   }
   if (isChild(relation) && el("relative-other-group").style.display !== "none" && otherParent().value === "") {
-    alert("Choose the other parent.");
+    alert(t("chooseOtherParent"));
     otherParent().focus();
     return;
   }
@@ -161,7 +163,7 @@ export function saveRelatives(): void {
   if (ui.view === "gen") renderGenView();
   if (ui.view === "list") renderListView();
   closeModal("modal-relative");
-  showToast(plan.people.length === 1 ? `${fullName(plan.people[0])} added` : `${plan.people.length} people added`);
+  showToast(plan.people.length === 1 ? t("addedOne", { name: fullName(plan.people[0]) }) : t("addedMany", { n: plan.people.length }));
   if (ui.view === "canvas") showNewCards(plan.people.map((p) => p.id));
 }
 

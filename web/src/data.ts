@@ -1,5 +1,6 @@
 // Delete all, JSON backup / restore, GEDCOM import / export.
 
+import { t } from "./i18n.ts";
 import { closeModal, el, newId, openModal, showToast, state } from "./state.ts";
 import { saveState } from "./sync.ts";
 import { render } from "./tree-view.ts";
@@ -15,14 +16,14 @@ export function deleteAllData(): void {
   saveState();
   render();
   closeModal("modal-delete");
-  showToast("All data deleted");
+  showToast(t("allDeleted"));
 }
 
 // ── JSON backup ──
 
 export function exportJson(): void {
   download(JSON.stringify(state, null, 2), "application/json", "rootfree-backup.json");
-  showToast("Backup downloaded");
+  showToast(t("backupDownloaded"));
 }
 
 export function importJson(): void {
@@ -36,14 +37,14 @@ export function importJson(): void {
     try {
       imp = JSON.parse(await file.text());
     } catch {
-      alert("Could not parse file.");
+      alert(t("cannotParse"));
       return;
     }
     if (!imp.people || !Array.isArray(imp.relationships)) {
-      alert("Invalid RootFree backup file.");
+      alert(t("invalidBackup"));
       return;
     }
-    if (!confirm("Merge imported data with current tree?")) return;
+    if (!confirm(t("confirmMerge"))) return;
     // Imported people get new ids so they never clash with existing ones.
     const idMap: Record<string, string> = {};
     Object.values(imp.people).forEach((p: Person) => {
@@ -58,7 +59,7 @@ export function importJson(): void {
     });
     saveState();
     render();
-    showToast("Data imported and merged");
+    showToast(t("merged"));
   };
   picker.click();
 }
@@ -77,7 +78,7 @@ export function openGedcomImport(): void {
     const inds = lines.filter((l) => l.includes("@") && l.includes("INDI")).length;
     const fams = lines.filter((l) => l.includes("@") && l.includes("FAM")).length;
     const prev = el("gedcom-preview");
-    prev.textContent = `Found ${inds} individuals and ${fams} families — ready to import.`;
+    prev.textContent = t("gedFound", { i: inds, f: fams });
     prev.style.display = "block";
   };
 }
@@ -85,7 +86,7 @@ export function openGedcomImport(): void {
 export async function doGedcomImport(): Promise<void> {
   const file = el<HTMLInputElement>("gedcom-file").files?.[0];
   if (!file) {
-    alert("Please select a .ged file.");
+    alert(t("pickGed"));
     return;
   }
   try {
@@ -119,9 +120,9 @@ export async function doGedcomImport(): Promise<void> {
     saveState();
     render();
     closeModal("modal-gedcom");
-    showToast("Imported " + imported.people.length + " people");
+    showToast(t("imported", { n: imported.people.length }));
   } catch (ex) {
-    alert("Error parsing GEDCOM: " + (ex instanceof Error ? ex.message : String(ex)));
+    alert(t("gedError", { msg: ex instanceof Error ? ex.message : String(ex) }));
   }
 }
 
@@ -228,7 +229,7 @@ function parseGedDate(d: string): string {
 export function exportGedcom(): void {
   const ids = Object.keys(state.people);
   if (!ids.length) {
-    showToast("No people to export");
+    showToast(t("nothingToExport"));
     return;
   }
   let ged =
@@ -264,7 +265,7 @@ export function exportGedcom(): void {
     });
   ged += "0 TRLR\n";
   download(ged, "text/plain", "rootfree-export.ged");
-  showToast("GEDCOM exported");
+  showToast(t("gedExported"));
 }
 
 function download(content: string, type: string, name: string): void {

@@ -1,18 +1,16 @@
 // Generation layout: one row per generation, partners side by side, children
 // under their parents, and the marriage information it relies on.
 
+import { t } from "./i18n.ts";
 import { showToast, state } from "./state.ts";
 import { saveState } from "./sync.ts";
 import { render } from "./tree-view.ts";
 import type { Gender } from "./types.ts";
 
 // Labels for people with several marriages.
-export const marriageLabel = (n: number): string => n + ". evlilik";
-const HALF_SIBLING_LABEL: Partial<Record<Gender, string>> = {
-  male: "baba bir kardeş",
-  female: "anne bir kardeş",
-};
-const HALF_SIBLING_DEFAULT = "yarım kardeş";
+export const marriageLabel = (n: number): string => t("marriage", { n });
+const halfSiblingLabel = (g: Gender): string =>
+  g === "male" ? t("paternalHalf") : g === "female" ? t("maternalHalf") : t("halfSibling");
 
 export interface MarriageInfo {
   /** Someone's partners in marriage order (only for people with two or more). */
@@ -85,7 +83,7 @@ export function marriageInfo(): MarriageInfo {
     });
     const main = sorted.reduce((best, s) => (descendants(kidsWith(s)) > descendants(kidsWith(best)) ? s : best));
     info.mainOf[id] = main;
-    const text = HALF_SIBLING_LABEL[state.people[id].gender] ?? HALF_SIBLING_DEFAULT;
+    const text = halfSiblingLabel(state.people[id].gender);
     sorted.forEach((s) => {
       if (s === main) return;
       kidsWith(s).forEach((c) => {
@@ -260,7 +258,7 @@ export function genLayout(): void {
   arrangeByGeneration();
   saveState();
   render();
-  showToast("Partners are now side by side");
+  showToast(t("arranged"));
 }
 
 // Generation layout: one row per generation, partners side by side, children
@@ -426,7 +424,7 @@ export function gridLayout(): void {
   });
   saveState();
   render();
-  showToast("Grid layout applied");
+  showToast(t("gridApplied"));
 }
 
 /** Per-person generations (longest path from a root); fallback for cyclic data. */

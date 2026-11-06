@@ -13,6 +13,7 @@ import {
   state,
   ui,
 } from "./state.ts";
+import { t, type Key } from "./i18n.ts";
 import { openAddRelative } from "./relatives.ts";
 import { saveState } from "./sync.ts";
 import { render } from "./tree-view.ts";
@@ -26,7 +27,7 @@ const FORM_FIELDS = ["f-first", "f-last", "f-birth", "f-death", "f-place", "f-oc
 export function openAddPerson(): void {
   ui.editingId = null;
   ui.currentPhoto = null;
-  el("modal-add-title").textContent = "Add Person";
+  el("modal-add-title").textContent = t("addPerson");
   FORM_FIELDS.forEach((i) => (input(i).value = ""));
   el<HTMLSelectElement>("f-gender").value = "unknown";
   resetPhotoPreview();
@@ -36,7 +37,7 @@ export function openAddPerson(): void {
 export function editPerson(id: string): void {
   ui.editingId = id;
   const p = state.people[id];
-  el("modal-add-title").textContent = "Edit Person";
+  el("modal-add-title").textContent = t("editPerson");
   input("f-first").value = p.first || "";
   input("f-last").value = p.last || "";
   input("f-birth").value = p.birth || "";
@@ -55,7 +56,7 @@ export function savePerson(): void {
   const first = input("f-first").value.trim();
   const last = input("f-last").value.trim();
   if (!first && !last) {
-    alert("Please enter at least a name.");
+    alert(t("enterAName"));
     return;
   }
   const data = {
@@ -86,7 +87,7 @@ export function savePerson(): void {
   saveState();
   render();
   closeModal("modal-add");
-  showToast(editing ? "Person updated" : "Person added");
+  showToast(editing ? t("personUpdated") : t("personAdded"));
 }
 
 export function deletePerson(id: string): void {
@@ -94,7 +95,7 @@ export function deletePerson(id: string): void {
   state.relationships = state.relationships.filter((r) => r.a !== id && r.b !== id);
   saveState();
   render();
-  showToast("Person deleted");
+  showToast(t("personDeleted"));
 }
 
 // ── Photo ──
@@ -108,7 +109,7 @@ export function handlePhotoUpload(e: Event): void {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    showToast("Photo must be under 5MB");
+    showToast(t("photoTooBig"));
     return;
   }
   const reader = new FileReader();
@@ -144,6 +145,9 @@ function resetPhotoPreview(): void {
 // ── Person details ──
 
 const REVERSE: Record<RelType, RelType> = { parent: "child", child: "parent", partner: "partner", sibling: "sibling" };
+/** The other person's role, shown in front of their name. */
+const OTHER_ROLE: Record<RelType, Key> = { parent: "relChild", child: "relParents", partner: "relPartner", sibling: "relSibling" };
+const GENDER_KEY: Record<string, Key> = { male: "genderMale", female: "genderFemale", other: "genderOther", unknown: "genderUnknown" };
 /** How a relationship reads from `id`'s side: "child" means id is the child. */
 const labelFor = (r: Relationship, id: string): RelType => (r.a === id ? r.type : REVERSE[r.type]);
 
@@ -170,7 +174,7 @@ export function viewPerson(id: string): void {
     .map((pid) => personLink(pid, fullName(state.people[pid])));
   if (parentLinks.length) {
     relItems.push(
-      `<div class="rel-item"><span class="rel-tag">child of</span>${parentLinks.join(" &amp; ")}<button class="rel-remove" data-action="removeParents" data-id="${esc(id)}">Remove</button></div>`,
+      `<div class="rel-item"><span class="rel-tag">${esc(t("relParents"))}</span>${parentLinks.join(" &amp; ")}<button class="rel-remove" data-action="removeParents" data-id="${esc(id)}">${esc(t("remove"))}</button></div>`,
     );
   }
   otherRels.forEach((rel) => {
@@ -178,7 +182,7 @@ export function viewPerson(id: string): void {
     const other = state.people[oid];
     if (!other) return;
     relItems.push(
-      `<div class="rel-item"><span class="rel-tag">${esc(labelFor(rel, id))}</span>${personLink(oid, fullName(other))}<button class="rel-remove" data-action="removeRelationship" data-a="${esc(rel.a)}" data-b="${esc(rel.b)}" data-type="${esc(rel.type)}" data-id="${esc(id)}">Remove</button></div>`,
+      `<div class="rel-item"><span class="rel-tag">${esc(t(OTHER_ROLE[labelFor(rel, id)]))}</span>${personLink(oid, fullName(other))}<button class="rel-remove" data-action="removeRelationship" data-a="${esc(rel.a)}" data-b="${esc(rel.b)}" data-type="${esc(rel.type)}" data-id="${esc(id)}">${esc(t("remove"))}</button></div>`,
     );
   });
 
@@ -186,13 +190,13 @@ export function viewPerson(id: string): void {
   el("view-body").innerHTML = `
     ${photo ? `<img class="detail-photo" src="${esc(photo)}" alt="${esc(fullName(p))}">` : ""}
     <table class="detail-table">
-${p.birth ? `<tr><td>Born</td><td>${esc(p.birth)}${p.place ? " · " + esc(p.place) : ""}</td></tr>` : ""}
-${p.death ? `<tr><td>Died</td><td>${esc(p.death)}</td></tr>` : ""}
-<tr><td>Gender</td><td style="text-transform:capitalize">${esc(p.gender || "Unknown")}</td></tr>
-${p.occupation ? `<tr><td>Occupation</td><td>${esc(p.occupation)}</td></tr>` : ""}
-${p.notes ? `<tr><td>Notes</td><td style="line-height:1.6">${esc(p.notes)}</td></tr>` : ""}
+${p.birth ? `<tr><td>${esc(t("born"))}</td><td>${esc(p.birth)}${p.place ? " · " + esc(p.place) : ""}</td></tr>` : ""}
+${p.death ? `<tr><td>${esc(t("died"))}</td><td>${esc(p.death)}</td></tr>` : ""}
+<tr><td>${esc(t("gender"))}</td><td>${esc(t(GENDER_KEY[p.gender] ?? "genderUnknown"))}</td></tr>
+${p.occupation ? `<tr><td>${esc(t("occupation"))}</td><td>${esc(p.occupation)}</td></tr>` : ""}
+${p.notes ? `<tr><td>${esc(t("notes"))}</td><td style="line-height:1.6">${esc(p.notes)}</td></tr>` : ""}
     </table>
-    ${relItems.length ? `<div class="rels-section"><div class="section-label" style="margin-top:16px">Connections</div>${relItems.join("")}</div>` : '<div style="margin-top:16px;font-size:12px;color:var(--text-light)">No connections added yet.</div>'}`;
+    ${relItems.length ? `<div class="rels-section"><div class="section-label" style="margin-top:16px">${esc(t("connections"))}</div>${relItems.join("")}</div>` : `<div style="margin-top:16px;font-size:12px;color:var(--text-light)">${esc(t("noConnections"))}</div>`}`;
   el("view-edit-btn").onclick = () => {
     closeModal("modal-view");
     editPerson(id);
@@ -202,7 +206,7 @@ ${p.notes ? `<tr><td>Notes</td><td style="line-height:1.6">${esc(p.notes)}</td><
     openAddRelative(id);
   };
   el("view-delete-btn").onclick = () => {
-    if (confirm("Delete " + fullName(p) + "?")) {
+    if (confirm(t("confirmDelete", { name: fullName(p) }))) {
       deletePerson(id);
       closeModal("modal-view");
     }
@@ -211,26 +215,26 @@ ${p.notes ? `<tr><td>Notes</td><td style="line-height:1.6">${esc(p.notes)}</td><
 }
 
 export function removeRelationship(rel: Relationship, personId: string): void {
-  if (!confirm("Remove this connection?")) return;
+  if (!confirm(t("confirmRemoveRel"))) return;
   state.relationships = state.relationships.filter(
     (r) => !(r.a === rel.a && r.b === rel.b && r.type === rel.type),
   );
   saveState();
   render();
   viewPerson(personId);
-  showToast("Connection removed");
+  showToast(t("connectionRemoved"));
 }
 
 /** Remove every parent connection of one person. */
 export function removeParents(childId: string): void {
-  if (!confirm("Remove all parent connections for this person?")) return;
+  if (!confirm(t("confirmRemoveParents"))) return;
   state.relationships = state.relationships.filter(
     (r) => !((r.a === childId || r.b === childId) && labelFor(r, childId) === "child"),
   );
   saveState();
   render();
   viewPerson(childId);
-  showToast("Parent connections removed");
+  showToast(t("parentsRemoved"));
 }
 
 // ── Connection dialog ──
@@ -250,7 +254,7 @@ export function openAddRel(id: string): void {
   const others = Object.values(state.people).filter((p: Person) => p.id !== id);
   if (!others.length) {
     list.innerHTML =
-      '<div style="padding:12px;font-size:13px;color:var(--text-light)">Add more people first.</div>';
+      `<div style="padding:12px;font-size:13px;color:var(--text-light)">${esc(t("addMoreFirst"))}</div>`;
   } else
     others.forEach((p) => {
       const div = document.createElement("div");
@@ -280,16 +284,16 @@ export function saveRelationship(): void {
   const a = ui.relSourceId,
     b = ui.selectedPickId;
   if (!a || !b) {
-    alert("Select a person to connect to.");
+    alert(t("selectPerson"));
     return;
   }
   if (state.relationships.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a))) {
-    showToast("Already connected");
+    showToast(t("alreadyConnected"));
     return;
   }
   state.relationships.push({ a, b, type: ui.selectedRelType });
   saveState();
   render();
   closeModal("modal-rel");
-  showToast("Connected");
+  showToast(t("connected"));
 }

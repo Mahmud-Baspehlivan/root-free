@@ -1,5 +1,6 @@
 // Shared state and small helpers used across the app.
 
+import { t } from "./i18n.ts";
 import type { Gender, Person, RelType, Tree, View } from "./types.ts";
 
 /** The family tree, mirrored from the server (see sync.ts). */
@@ -61,22 +62,22 @@ export function gClass(g: Gender | string): "male" | "female" | "other" {
 
 export function lifespan(p: Person): string {
   if (p.birth && p.death) return p.birth + "–" + p.death;
-  if (p.birth) return "b. " + p.birth;
-  if (p.death) return "d. " + p.death;
+  if (p.birth) return t("bornShort", { y: p.birth });
+  if (p.death) return t("diedShort", { y: p.death });
   return "";
 }
 
 export function fullName(p: Person): string {
-  return ((p.first || "") + (p.last ? " " + p.last : "")).trim() || "Unknown";
+  return ((p.first || "") + (p.last ? " " + p.last : "")).trim() || t("unknownName");
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export function showToast(msg: string, dur = 2600): void {
-  const t = el("toast");
-  t.textContent = msg;
-  t.classList.add("show");
+  const box = el("toast");
+  box.textContent = msg;
+  box.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), dur);
+  toastTimer = setTimeout(() => box.classList.remove("show"), dur);
 }
 
 /** Person icon for cards without a photo. */
