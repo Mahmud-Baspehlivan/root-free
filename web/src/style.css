@@ -354,6 +354,36 @@ body {
   font-weight: 600;
   color: var(--accent);
 }
+/* "+" on a card: add a relative of this person. */
+.card-add {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border-mid);
+  background: var(--surface);
+  color: var(--green);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+  font-family: "Inter", sans-serif;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  opacity: 0.85;
+  transition: all 0.13s;
+}
+.card-add:hover {
+  opacity: 1;
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+/* New cards are highlighted for a moment after adding relatives. */
+.person-card.just-added {
+  box-shadow: 0 0 0 3px var(--green-mid), var(--shadow-md);
+}
 
 .card-footer {
   border-top: 1px solid var(--border);
@@ -711,6 +741,32 @@ body {
 }
 .rel-option.selected .rel-option-sub {
   color: var(--green-mid);
+}
+.relation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 7px;
+}
+.relation-option {
+  padding: 10px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+  background: var(--surface);
+  color: var(--text-mid);
+  transition: all 0.13s;
+}
+.relation-option:hover {
+  border-color: var(--green-mid);
+  color: var(--text);
+}
+.relation-option.selected {
+  border-color: var(--green-mid);
+  background: var(--green-light);
+  color: var(--green);
 }
 
 /* ── PERSON LIST (rel picker) ── */

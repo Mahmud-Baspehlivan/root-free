@@ -255,10 +255,19 @@ export function buildFamilyLayoutBlocks(): FamilyBlocks {
   return { blocksByGen, parentIds, childIds, marriages, maxGen: Math.max(0, ...blocks.map((b) => b.gen)) };
 }
 
+// The Generation Layout button: arrange, save, redraw.
+export function genLayout(): void {
+  arrangeByGeneration();
+  saveState();
+  render();
+  showToast("Partners are now side by side");
+}
+
 // Generation layout: one row per generation, partners side by side, children
 // centred under their parents. Rows are placed by repeated down and up sweeps
 // that pull each block toward its parents and then toward its children.
-export function genLayout(): void {
+// Only sets the positions in `state`.
+export function arrangeByGeneration(): void {
   const { blocksByGen, parentIds, childIds, marriages, maxGen } = buildFamilyLayoutBlocks();
   const CARD = 172,
     SPOUSE_GAP = 24,
@@ -406,9 +415,6 @@ export function genLayout(): void {
       }),
     ),
   );
-  saveState();
-  render();
-  showToast("Partners are now side by side");
 }
 
 export function gridLayout(): void {

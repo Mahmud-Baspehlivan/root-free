@@ -39,6 +39,7 @@ export function render(): void {
       ? `<img class="card-photo" src="${esc(photo)}" alt="${esc(fullName(p))}">`
       : `<div class="card-photo-placeholder ${gc}">${personSVG(gc)}</div>`;
     card.innerHTML = `${photoHtml}${badge[id] ? `<span class="card-badge">${esc(badge[id])}</span>` : ""}
+<button class="card-add" data-action="openAddRelative" data-id="${esc(id)}" title="Add a relative" aria-label="Add a relative">+</button>
 <div class="card-body">
   <div class="card-name">${esc(fullName(p))}</div>
   <div class="card-life">${esc(lifespan(p)) || "&nbsp;"}</div>

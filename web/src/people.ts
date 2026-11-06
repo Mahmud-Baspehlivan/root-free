@@ -13,6 +13,7 @@ import {
   state,
   ui,
 } from "./state.ts";
+import { openAddRelative } from "./relatives.ts";
 import { saveState } from "./sync.ts";
 import { render } from "./tree-view.ts";
 import type { Gender, Person, RelType, Relationship } from "./types.ts";
@@ -195,6 +196,10 @@ ${p.notes ? `<tr><td>Notes</td><td style="line-height:1.6">${esc(p.notes)}</td><
   el("view-edit-btn").onclick = () => {
     closeModal("modal-view");
     editPerson(id);
+  };
+  el("view-relative-btn").onclick = () => {
+    closeModal("modal-view");
+    openAddRelative(id);
   };
   el("view-delete-btn").onclick = () => {
     if (confirm("Delete " + fullName(p) + "?")) {

@@ -17,6 +17,7 @@ import {
   triggerPhotoUpload,
   viewPerson,
 } from "./people.ts";
+import { initRelatives, openAddRelative, pickRelation, saveRelatives } from "./relatives.ts";
 import { closeModal, el } from "./state.ts";
 import { hasUnsavedChanges, loadState } from "./sync.ts";
 import { switchView } from "./tree-view.ts";
@@ -34,6 +35,9 @@ const actions: Record<string, (target: HTMLElement, event: MouseEvent) => void> 
   },
   viewPerson: (t) => viewPerson(t.dataset.id!),
   openAddRel: (t) => openAddRel(t.dataset.id!),
+  openAddRelative: (t) => openAddRelative(t.dataset.id!),
+  pickRelation: (t) => pickRelation(t),
+  saveRelatives,
   selectRelType: (t) => selectRelType(t),
   saveRelationship,
   removeRelationship: (t) =>
@@ -94,6 +98,7 @@ function initDark(): void {
 }
 
 initDark();
+initRelatives();
 initCanvasPan();
 initCanvasZoom();
 void loadState();

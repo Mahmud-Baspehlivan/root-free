@@ -218,8 +218,7 @@
               <img id="photo-preview" style="display: none" alt="Preview" />
               <div id="photo-placeholder">
                 <div class="photo-zone-hint">
-                  Click to upload a photo &mdash;
-                  <strong>stored locally only</strong>
+                  Click to upload a photo
                 </div>
               </div>
               <div id="photo-remove" style="display: none; margin-top: 6px">
@@ -373,6 +372,71 @@
       </div>
     </div>
 
+    <!-- ADD A RELATIVE -->
+    <div class="modal-overlay" id="modal-relative" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="relative-title">Add a relative</h2>
+          <button class="modal-close" data-action="closeModal" data-modal="modal-relative">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Who are you adding?</label>
+            <div class="relation-grid">
+              <button class="relation-option" data-action="pickRelation" data-relation="father">Father</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="mother">Mother</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="spouse">Spouse</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="son">Son</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="daughter">Daughter</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="brother">Brother</button>
+              <button class="relation-option" data-action="pickRelation" data-relation="sister">Sister</button>
+            </div>
+          </div>
+          <div id="relative-form" style="display: none">
+            <div class="form-group" id="relative-other-group" style="display: none">
+              <label class="form-label" for="relative-other">Other parent</label>
+              <select class="form-select" id="relative-other"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="relative-first-label" for="relative-first">First name</label>
+              <input class="form-input" id="relative-first" autocomplete="off" />
+              <div class="form-hint" id="relative-names-hint">
+                Separate names with commas to add several at once.
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="relative-last">Last name</label>
+                <input class="form-input" id="relative-last" placeholder="Last name" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="relative-birth">Birth year</label>
+                <input class="form-input" id="relative-birth" placeholder="Optional" type="number" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="relative-gender">Gender</label>
+              <select class="form-select" id="relative-gender">
+                <option value="unknown">Unknown</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-hint">
+              More details (place, notes, photo) can be added later with Edit.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" data-action="closeModal" data-modal="modal-relative">Cancel</button>
+          <button class="btn btn-primary" data-action="saveRelatives">Add</button>
+        </div>
+      </div>
+    </div>
+
     <!-- VIEW PERSON -->
     <div class="modal-overlay" id="modal-view" style="display: none">
       <div class="modal">
@@ -386,6 +450,7 @@
         <div class="modal-footer">
           <button class="btn btn-danger" id="view-delete-btn">Delete</button>
           <button class="btn" data-action="closeModal" data-modal="modal-view">Close</button>
+          <button class="btn" id="view-relative-btn">+ Relative</button>
           <button class="btn btn-primary" id="view-edit-btn">Edit</button>
         </div>
       </div>
