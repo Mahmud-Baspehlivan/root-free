@@ -295,10 +295,21 @@
         overflow: auto;
         background: var(--bg);
       }
-      #tree-canvas {
+      /* Sized to the zoomed tree (see applyZoom) and clipping it, so the
+         scrollable area shrinks when zooming out instead of keeping the
+         unzoomed size. */
+      #zoom-box {
         position: relative;
         min-width: 100%;
         min-height: 100%;
+        overflow: hidden;
+      }
+      /* Absolutely placed so its size comes only from updateCanvasSize and
+         never from the box around it. */
+      #tree-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
         z-index: 1;
       }
       /* Grid lives on the scroll container itself; "local" makes it scroll
@@ -312,6 +323,8 @@
         background-size: 40px 40px;
         background-attachment: local;
         cursor: grab;
+        /* One finger scrolls natively; pinch is handled in initCanvasZoom. */
+        touch-action: pan-x pan-y;
       }
       #view-canvas.panning {
         cursor: grabbing;
@@ -1481,6 +1494,7 @@
 
       <!-- CANVAS VIEW -->
       <div class="canvas-wrap" id="view-canvas">
+        <div id="zoom-box">
         <div id="tree-canvas">
           <div class="welcome" id="welcome-msg">
             <div class="welcome-icon">
@@ -1507,6 +1521,7 @@
             </p>
           </div>
           <svg id="connector-svg"></svg>
+        </div>
         </div>
       </div>
 
@@ -2342,8 +2357,13 @@
           maxX = Math.max(maxX, (p.x || 0) + 220);
           maxY = Math.max(maxY, (p.y || 0) + 280);
         });
+        // Always cover the visible area, whatever the zoom.
+        const view = document.getElementById("view-canvas");
+        maxX = Math.max(maxX, view.clientWidth / currentZoom);
+        maxY = Math.max(maxY, view.clientHeight / currentZoom);
         canvas.style.minWidth = maxX + "px";
         canvas.style.minHeight = maxY + "px";
+        applyZoom();
       }
 
       function drawConnectors() {
@@ -2831,6 +2851,89 @@
         };
         wrap.addEventListener("pointerup", endPan);
         wrap.addEventListener("pointercancel", endPan);
+        initCanvasZoom(wrap);
+      }
+
+      // Zoom the tree the way maps and design tools do: trackpad pinch or
+      // Ctrl/⌘ + mouse wheel on a computer, two-finger pinch on a phone. A
+      // plain wheel or two-finger swipe still scrolls. The browser's own page
+      // zoom is suppressed over the tree so the toolbar keeps its size.
+      function initCanvasZoom(wrap) {
+        // Chrome, Edge and Firefox report a trackpad pinch as a wheel event
+        // with ctrlKey set; a mouse wheel with Ctrl or ⌘ held arrives the same way.
+        wrap.addEventListener(
+          "wheel",
+          (e) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault();
+            const dy = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY;
+            const step = Math.max(-60, Math.min(60, dy));
+            zoomTo(currentZoom * Math.exp(-step * 0.004), e.clientX, e.clientY);
+          },
+          { passive: false },
+        );
+
+        // Two-finger pinch on a touch screen.
+        let pinch = null;
+        const centre = (t) => ({
+          x: (t[0].clientX + t[1].clientX) / 2,
+          y: (t[0].clientY + t[1].clientY) / 2,
+        });
+        const spread = (t) =>
+          Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        wrap.addEventListener(
+          "touchstart",
+          (e) => {
+            if (e.touches.length !== 2) return;
+            const r = wrap.getBoundingClientRect();
+            const c = centre(e.touches);
+            pinch = {
+              d: spread(e.touches) || 1,
+              z: currentZoom,
+              tx: (c.x - r.left + wrap.scrollLeft) / currentZoom,
+              ty: (c.y - r.top + wrap.scrollTop) / currentZoom,
+            };
+          },
+          { passive: true },
+        );
+        wrap.addEventListener(
+          "touchmove",
+          (e) => {
+            if (!pinch || e.touches.length !== 2) return;
+            if (e.cancelable) e.preventDefault();
+            const c = centre(e.touches);
+            zoomTo(
+              (pinch.z * spread(e.touches)) / pinch.d,
+              c.x,
+              c.y,
+              pinch.tx,
+              pinch.ty,
+            );
+          },
+          { passive: false },
+        );
+        const endPinch = (e) => {
+          if (e.touches.length < 2) pinch = null;
+        };
+        wrap.addEventListener("touchend", endPinch);
+        wrap.addEventListener("touchcancel", endPinch);
+
+        // Safari: trackpad pinch on a Mac arrives as gesture events; on an
+        // iPhone the touch handlers above do the work, so only block the page zoom.
+        let gestureZoom = null;
+        wrap.addEventListener("gesturestart", (e) => {
+          e.preventDefault();
+          gestureZoom = pinch ? null : currentZoom;
+        });
+        wrap.addEventListener("gesturechange", (e) => {
+          e.preventDefault();
+          if (gestureZoom !== null && !pinch)
+            zoomTo(gestureZoom * e.scale, e.clientX, e.clientY);
+        });
+        wrap.addEventListener("gestureend", (e) => {
+          e.preventDefault();
+          gestureZoom = null;
+        });
       }
 
       // ═══════════════════════════════════════
@@ -3764,22 +3867,50 @@
       // ═══════════════════════════════════════
       // ZOOM
       // ═══════════════════════════════════════
+      const ZOOM_MIN = 0.2,
+        ZOOM_MAX = 2;
+      // Buttons zoom around the middle of the visible area.
       function zoomIn() {
-        currentZoom = Math.min(2, currentZoom + 0.15);
-        applyZoom();
+        zoomTo(currentZoom * 1.2);
       }
       function zoomOut() {
-        currentZoom = Math.max(0.35, currentZoom - 0.15);
-        applyZoom();
+        zoomTo(currentZoom / 1.2);
       }
       function resetZoom() {
-        currentZoom = 1;
-        applyZoom();
+        zoomTo(1);
+      }
+      // Zoom so the tree point under (clientX, clientY) stays under it, like
+      // a map. A pinch passes the tree point it started on, so moving the
+      // fingers also pans.
+      function zoomTo(z, clientX, clientY, treeX, treeY) {
+        const wrap = document.getElementById("view-canvas");
+        const r = wrap.getBoundingClientRect();
+        if (clientX === undefined) {
+          clientX = r.left + wrap.clientWidth / 2;
+          clientY = r.top + wrap.clientHeight / 2;
+        }
+        const vx = clientX - r.left,
+          vy = clientY - r.top;
+        if (treeX === undefined) {
+          treeX = (vx + wrap.scrollLeft) / currentZoom;
+          treeY = (vy + wrap.scrollTop) / currentZoom;
+        }
+        currentZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+        updateCanvasSize();
+        wrap.scrollLeft = treeX * currentZoom - vx;
+        wrap.scrollTop = treeY * currentZoom - vy;
       }
       function applyZoom() {
         const c = document.getElementById("tree-canvas");
         c.style.transform = `scale(${currentZoom})`;
         c.style.transformOrigin = "top left";
+        const box = document.getElementById("zoom-box");
+        box.style.width = c.offsetWidth * currentZoom + "px";
+        box.style.height = c.offsetHeight * currentZoom + "px";
+        // The grid grows and shrinks with the tree.
+        const g = 40 * currentZoom + "px";
+        document.getElementById("view-canvas").style.backgroundSize =
+          g + " " + g;
       }
 
       // ═══════════════════════════════════════
