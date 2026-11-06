@@ -432,7 +432,6 @@ function genLayout() {
   );
   saveState();
   render();
-  broadcast();
   showToast("Partners are now side by side");
 }
 
@@ -445,6 +444,5 @@ function gridLayout() {
   });
   saveState();
   render();
-  broadcast();
   showToast("Grid layout applied");
 }

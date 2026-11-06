@@ -59,7 +59,6 @@ function importJson() {
             });
             saveState();
             render();
-            broadcast();
             showToast("Data imported and merged");
           }
         } else alert("Invalid RootFree backup file.");
@@ -139,7 +138,6 @@ function doGedcomImport() {
       });
       saveState();
       render();
-      broadcast();
       closeModal("modal-gedcom");
       showToast("Imported " + added + " people");
     } catch (ex) {

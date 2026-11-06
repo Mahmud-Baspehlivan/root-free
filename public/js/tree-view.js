@@ -40,7 +40,6 @@ function render() {
     card.id = "card-" + id;
     card.style.left = (p.x || 100) + "px";
     card.style.top = (p.y || 100) + "px";
-    const canEdit = !peer || isHost || shareMode === "edit";
     const photoHtml = p.photo
       ? `<img class="card-photo" src="${p.photo}" alt="${fullName(p)}">`
       : `<div class="card-photo-placeholder ${gc}">${personSVG(gc)}</div>`;
@@ -52,7 +51,7 @@ function render() {
 </div>
 <div class="card-footer">
   <button class="card-action" onclick="viewPerson('${id}')">View</button>
-  <button class="card-action primary" onclick="openAddRel('${id}')" ${!canEdit ? "disabled" : ""}>Connect</button>
+  <button class="card-action primary" onclick="openAddRel('${id}')">Connect</button>
 </div>`;
     makeDraggable(card, id);
     canvas.appendChild(card);
@@ -87,8 +86,6 @@ function makeDraggable(card, id) {
     startY = 0;
   card.addEventListener("mousedown", (e) => {
     if (e.target.tagName === "BUTTON") return;
-    const canEdit = !peer || isHost || shareMode === "edit";
-    if (!canEdit) return;
     e.preventDefault();
     const p = state.people[id];
     const wrap = document.getElementById("view-canvas");
@@ -126,7 +123,6 @@ function makeDraggable(card, id) {
       card.classList.remove("dragging");
       if (moved) {
         saveState();
-        broadcast();
       }
       document.removeEventListener("mousemove", mm);
       document.removeEventListener("mouseup", mu);

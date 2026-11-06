@@ -2,11 +2,6 @@
 // PERSON CRUD
 // ═══════════════════════════════════════
 function openAddPerson() {
-  const canEdit = !peer || isHost || shareMode === "edit";
-  if (!canEdit) {
-    showToast("View only — cannot add people");
-    return;
-  }
   editingId = null;
   currentPhoto = null;
   document.getElementById("modal-add-title").textContent = "Add Person";
@@ -90,7 +85,6 @@ function savePerson() {
   }
   saveState();
   render();
-  broadcast();
   closeModal("modal-add");
   showToast(editingId ? "Person updated" : "Person added");
 }
@@ -124,7 +118,6 @@ function deletePerson(id) {
   );
   saveState();
   render();
-  broadcast();
   showToast("Person deleted");
 }
 
@@ -139,7 +132,6 @@ function viewPerson(id) {
         ? "#6b4fa0"
         : "var(--border-mid)");
   document.getElementById("view-name").textContent = fullName(p);
-  const canEdit = !peer || isHost || shareMode === "edit";
 
   // Build deduplicated relationship list.
   // Problem: if James is child of both Thomas AND Margaret, we get two separate
@@ -177,9 +169,7 @@ function viewPerson(id) {
       })
       .filter(Boolean);
     if (parentNames.length) {
-      const removeBtn = canEdit
-        ? `<button class="rel-remove" onclick="removeRelationshipGroup(${JSON.stringify(parentIds)},'${id}')">Remove</button>`
-        : "";
+      const removeBtn = `<button class="rel-remove" onclick="removeRelationshipGroup(${JSON.stringify(parentIds)},'${id}')">Remove</button>`;
       relItems.push(
         `<div class="rel-item"><span class="rel-tag">child of</span>${parentNames.join(" &amp; ")}${removeBtn}</div>`,
       );
@@ -193,9 +183,7 @@ function viewPerson(id) {
     if (!other) return;
     const label = rel.a === id ? rel.type : rev[rel.type] || rel.type;
     const relIdx = state.relationships.indexOf(rel);
-    const removeBtn = canEdit
-      ? `<button class="rel-remove" onclick="removeRelationship(${relIdx},'${id}')">Remove</button>`
-      : "";
+    const removeBtn = `<button class="rel-remove" onclick="removeRelationship(${relIdx},'${id}')">Remove</button>`;
     relItems.push(
       `<div class="rel-item"><span class="rel-tag">${label}</span><a class="rel-name" href="#" onclick="closeModal('modal-view');viewPerson('${oid}');return false">${fullName(other)}</a>${removeBtn}</div>`,
     );
@@ -211,12 +199,6 @@ ${p.occupation ? `<tr><td>Occupation</td><td>${p.occupation}</td></tr>` : ""}
 ${p.notes ? `<tr><td>Notes</td><td style="line-height:1.6">${p.notes}</td></tr>` : ""}
     </table>
     ${relItems.length ? `<div class="rels-section"><div class="section-label" style="margin-top:16px">Connections</div>${relItems.join("")}</div>` : '<div style="margin-top:16px;font-size:12px;color:var(--text-light)">No connections added yet.</div>'}`;
-  document.getElementById("view-edit-btn").style.display = canEdit
-    ? ""
-    : "none";
-  document.getElementById("view-delete-btn").style.display = canEdit
-    ? ""
-    : "none";
   document.getElementById("view-edit-btn").onclick = () => {
     closeModal("modal-view");
     editPerson(id);
@@ -235,7 +217,6 @@ function removeRelationship(idx, personId) {
   state.relationships.splice(idx, 1);
   saveState();
   render();
-  broadcast();
   viewPerson(personId); // refresh the modal
   showToast("Connection removed");
 }
@@ -251,7 +232,6 @@ function removeRelationshipGroup(parentIds, childId) {
   });
   saveState();
   render();
-  broadcast();
   viewPerson(childId);
   showToast("Parent connections removed");
 }
@@ -260,11 +240,6 @@ function removeRelationshipGroup(parentIds, childId) {
 // RELATIONSHIPS
 // ═══════════════════════════════════════
 function openAddRel(id) {
-  const canEdit = !peer || isHost || shareMode === "edit";
-  if (!canEdit) {
-    showToast("View only — cannot add connections");
-    return;
-  }
   relSourceId = id;
   selectedPickId = null;
   const gColors = {
@@ -332,7 +307,6 @@ function saveRelationship() {
   });
   saveState();
   render();
-  broadcast();
   closeModal("modal-rel");
   showToast("Connected");
 }

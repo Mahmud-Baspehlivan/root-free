@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RootFree — Family Tree</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -82,9 +81,6 @@
         </div>
 
         <div class="header-right">
-          <button class="btn btn-share" onclick="openShareModal()">
-            Share Tree
-          </button>
           <button class="btn" onclick="openGedcomImport()">
             Import GEDCOM
           </button>
@@ -104,21 +100,6 @@
           </button>
         </div>
       </header>
-
-      <!-- SYNC BAR -->
-      <div class="sync-bar" id="sync-bar">
-        <div class="sync-indicator">
-          <div class="sync-dot" id="sync-dot"></div>
-          <span id="sync-status-text">Connecting…</span>
-          <div class="sync-peers" id="sync-peers"></div>
-        </div>
-        <div class="sync-right">
-          <span class="sync-badge" id="sync-badge"></span>
-          <button class="btn-end-session" onclick="stopSession()">
-            End session
-          </button>
-        </div>
-      </div>
 
       <!-- CANVAS VIEW -->
       <div class="canvas-wrap" id="view-canvas">
@@ -207,27 +188,6 @@
 
     <!-- TOAST -->
     <div class="toast" id="toast"></div>
-
-    <!-- JOIN SCREEN -->
-    <div class="join-screen" id="join-screen">
-      <div class="join-card">
-        <div class="join-spinner" id="join-spinner"></div>
-        <h2 id="join-title">Connecting…</h2>
-        <p id="join-desc">
-          Establishing a direct peer-to-peer connection. No server sees your
-          family data.
-        </p>
-        <div id="join-actions" style="display: none; margin-top: 20px">
-          <button
-            class="btn btn-primary"
-            style="width: 100%; padding: 10px; font-size: 13px"
-            onclick="dismissJoin()"
-          >
-            Open Tree
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- ════════════════════════════════
      MODALS
@@ -524,77 +484,7 @@
       </div>
     </div>
 
-    <!-- SHARE -->
-    <div class="modal-overlay" id="modal-share" style="display: none">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Share Tree</h2>
-          <button class="modal-close" onclick="closeModal('modal-share')">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="info-box">
-            Your family data travels directly between browsers — peer-to-peer.
-            No server ever sees the content. The session ends when everyone
-            closes the tab.
-          </div>
-          <div class="form-group">
-            <label class="form-label">Access level</label>
-            <div class="share-mode-grid">
-              <button
-                class="share-mode-opt selected"
-                id="mode-edit-btn"
-                onclick="selectShareMode('edit')"
-              >
-                <div class="share-mode-opt-title">Can edit</div>
-                <div class="share-mode-opt-sub">
-                  Guests can add, edit and remove people
-                </div>
-              </button>
-              <button
-                class="share-mode-opt"
-                id="mode-view-btn"
-                onclick="selectShareMode('view')"
-              >
-                <div class="share-mode-opt-title">View only</div>
-                <div class="share-mode-opt-sub">
-                  Guests can browse but not make changes
-                </div>
-              </button>
-            </div>
-          </div>
-          <div id="share-link-section" style="display: none">
-            <label class="form-label">Share this link</label>
-            <div class="share-link-display" id="share-link-display"></div>
-            <button
-              class="btn btn-primary"
-              style="width: 100%"
-              onclick="copyShareLink()"
-            >
-              Copy Link
-            </button>
-            <div class="warning-box">
-              Anyone with this link can
-              <span id="share-mode-warn">edit</span> your tree while this
-              session is active. Only share with people you trust.
-            </div>
-          </div>
-          <div id="share-generate-section">
-            <button
-              class="btn btn-primary"
-              style="width: 100%; padding: 10px; font-size: 13px"
-              onclick="startSession()"
-            >
-              Generate Link
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <script src="js/state.js"></script>
-    <script src="js/share.js"></script>
     <script src="js/tree-view.js"></script>
     <script src="js/connectors.js"></script>
     <script src="js/canvas-nav.js"></script>

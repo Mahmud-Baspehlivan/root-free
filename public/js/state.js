@@ -21,7 +21,6 @@ function loadState() {
     if (d) state = JSON.parse(d);
   } catch (e) {}
   render();
-  checkJoinParam();
 }
 function saveState() {
   try {
