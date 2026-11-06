@@ -312,6 +312,15 @@ body {
 }
 .card-life { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
 .card-meta { font-size: 11px; color: var(--text-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Half-sibling badge, laid over the photo so the card keeps its height and
+   the connector lines still meet its edges. */
+.card-badge {
+  position: absolute; top: 8px; left: 8px; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  font-size: 10px; font-weight: 600; pointer-events: none;
+}
+.gen-card-badge { margin-top: 4px; font-size: 10px; font-weight: 600; color: var(--accent); }
 
 .card-footer {
   border-top: 1px solid var(--border);
@@ -684,7 +693,10 @@ body {
   color: var(--text-light);
   margin-bottom: 14px;
 }
-.gen-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px; }
+.gen-row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px; }
+/* Keep partners together even when a generation wraps on small screens. */
+.gen-couple { display: flex; gap: 10px; flex-wrap: nowrap; align-items: flex-start; flex-shrink: 0; }
+.gen-couple .gen-card { flex: 0 0 144px; }
 .gen-card {
   width: 144px;
   background: var(--surface);
@@ -1442,6 +1454,7 @@ function render(){
   canvas.querySelectorAll('.person-card').forEach(e => e.remove());
   const ids = Object.keys(state.people);
   document.getElementById('welcome-msg').style.display = ids.length ? 'none' : 'block';
+  const { badge } = marriageInfo();
   ids.forEach(id => {
     const p = state.people[id];
     const gc = gClass(p.gender);
@@ -1452,7 +1465,7 @@ function render(){
     const photoHtml = p.photo
       ? `<img class="card-photo" src="${p.photo}" alt="${fullName(p)}">`
       : `<div class="card-photo-placeholder ${gc}">${personSVG(gc)}</div>`;
-    card.innerHTML = `${photoHtml}
+    card.innerHTML = `${photoHtml}${badge[id] ? `<span class="card-badge">${badge[id]}</span>` : ''}
       <div class="card-body">
         <div class="card-name">${fullName(p)}</div>
         <div class="card-life">${lifespan(p) || '&nbsp;'}</div>
@@ -1512,12 +1525,54 @@ function drawConnectors(){
     e.setAttribute('font-family','Inter,sans-serif'); e.setAttribute('font-weight','500');
     e.textContent=t; svg.appendChild(e);
   }
+  // A line with a background-coloured edge, so the lines it crosses look
+  // interrupted instead of joined.
+  function haloSeg(x1,y1,x2,y2,col,dash){
+    const e=document.createElementNS('http://www.w3.org/2000/svg','line');
+    e.setAttribute('x1',x1|0); e.setAttribute('y1',y1|0);
+    e.setAttribute('x2',x2|0); e.setAttribute('y2',y2|0);
+    e.setAttribute('stroke-width','7'); e.style.stroke='var(--bg)';
+    svg.appendChild(e);
+    if(col) seg(x1,y1,x2,y2,col,dash);
+  }
+  function haloLbl(x,y,t,col){
+    lbl(x,y,t,col);
+    const e=svg.lastChild;
+    e.style.paintOrder='stroke'; e.style.stroke='var(--bg)'; e.style.strokeWidth='4px';
+  }
 
-  // Partners — simple curve
+  const marriages = marriageInfo();
+  const marriageNo = (x,y) => marriages.number[[x,y].sort().join('|')];
+  // Two people in the same row with another card between them (a third
+  // spouse standing beyond the second one).
+  const cardsBetween = (a,b) => {
+    if(Math.abs((a.y||0)-(b.y||0)) >= 5) return false;
+    const l=Math.min(a.x||0,b.x||0), r=Math.max(a.x||0,b.x||0);
+    return Object.values(state.people).some(p => p!==a && p!==b &&
+      Math.abs((p.y||0)-(a.y||0)) < 5 && (p.x||0) > l && (p.x||0) < r);
+  };
+
+  // Partners — a short line between the cards when they stand side by side,
+  // a bridge over the row when another card stands between them, otherwise
+  // a curve. Someone with several partners gets numbered marriages.
   state.relationships.filter(r=>r.type==='partner').forEach(rel=>{
     const a=state.people[rel.a],b=state.people[rel.b]; if(!a||!b) return;
-    bez(cx(a),mid(a),cx(b),mid(b),PARTNER,'6 4');
-    lbl((cx(a)+cx(b))/2,(mid(a)+mid(b))/2-8,'partner',PARTNER);
+    const no=marriageNo(rel.a,rel.b);
+    const text=no ? marriageLabel(no) : 'partner';
+    const left=a.x<=b.x ? a : b, right=left===a ? b : a;
+    if(Math.abs(mid(a)-mid(b))<5 && right.x>=left.x+CARD_W && right.x-(left.x+CARD_W)<=65){
+      seg(left.x+CARD_W,mid(left),right.x,mid(right),PARTNER,'6 4');
+      if(no) lbl((left.x+CARD_W+right.x)/2,mid(left)-6,text,PARTNER);
+    } else if(cardsBetween(a,b)){
+      const y=top(left)-9, x1=left.x+CARD_W-24, x2=right.x+24;
+      seg(x1,top(left),x1,y,PARTNER,'6 4');
+      haloSeg(x1,y,x2,y,PARTNER,'6 4');
+      seg(x2,y,x2,top(right),PARTNER,'6 4');
+      haloLbl((x1+x2)/2,y+3,text,PARTNER);
+    } else {
+      bez(cx(a),mid(a),cx(b),mid(b),PARTNER,'6 4');
+      lbl((cx(a)+cx(b))/2,(mid(a)+mid(b))/2-8,text,PARTNER);
+    }
   });
 
   // Siblings — simple curve
@@ -1549,7 +1604,94 @@ function drawConnectors(){
     if(!groups[key].cids.includes(cid)) groups[key].cids.push(cid);
   });
 
-  Object.values(groups).forEach(({pids,cids})=>{
+  // Children of someone with several marriages are drawn per marriage (see
+  // drawMarriageLines); everything else uses the plain couple drawing.
+  const hubGroups={};
+  Object.values(groups).forEach(g=>{
+    const hub=g.pids.length<=2 && g.pids.find(id=>marriages.order[id]);
+    const H=hub && state.people[hub];
+    const sid=H && g.pids.length===2 && g.pids.find(id=>id!==hub);
+    const S=sid ? state.people[sid] : null;
+    if(H && (g.pids.length===1 || (S && Math.abs(H.y-S.y)<5))){
+      (hubGroups[hub]=hubGroups[hub]||[]).push({cids:g.cids,S,sid});
+    } else drawFamily(g);
+  });
+  Object.entries(hubGroups).forEach(([hub,gs])=>drawMarriageLines(hub,gs));
+
+  // One person with several marriages: each marriage's line comes down from
+  // the partner line between the two spouses (or from the spouse's own card
+  // when another card stands between them), and each family's children bar
+  // gets its own height, picked so that lines cross as little as possible.
+  function drawMarriageLines(hubId,gs){
+    const H=state.people[hubId], rank=marriages.order[hubId]||[];
+    gs.forEach(g=>{
+      g.kids=g.cids.map(id=>state.people[id]).filter(Boolean);
+      g.order=g.sid ? rank.indexOf(g.sid) : rank.length;
+      if(!g.S || cardsBetween(H,g.S)){
+        const from=g.S||H;
+        g.x=cx(from); g.y0=bot(from); g.lo=g.hi=g.x;
+      } else {
+        const l=Math.min(H.x,g.S.x)+CARD_W, r=Math.max(H.x,g.S.x);
+        g.x=(l+r)/2; g.lo=Math.min(g.x,l+8); g.hi=Math.max(g.x,r-8); g.y0=mid(H)+6;
+      }
+    });
+    gs=gs.filter(g=>g.kids.length).sort((a,b)=>a.order-b.order);
+    if(!gs.length) return;
+    // Slide each stem within its gap, away from the other families' drops,
+    // so it never runs alongside a half-sibling's line.
+    gs.forEach(g=>{
+      const foreign=gs.filter(o=>o!==g).flatMap(o=>o.kids.map(cx));
+      const room=x=>Math.min(Infinity,...foreign.map(f=>Math.abs(f-x)));
+      let best=g.x;
+      for(let d=0; g.x-d>=g.lo || g.x+d<=g.hi; d+=4){
+        const cand=[g.x-d,g.x+d].filter(x=>x>=g.lo && x<=g.hi);
+        const hit=cand.find(x=>room(x)>=16);
+        if(hit!==undefined){ best=hit; break; }
+        cand.forEach(x=>{ if(room(x)>room(best)) best=x; });
+      }
+      g.x=best;
+      const xs=g.kids.map(cx);
+      g.min=Math.min(g.x,...xs); g.max=Math.max(g.x,...xs);
+    });
+    const n=gs.length;
+    const firstTop=Math.min(...gs.flatMap(g=>g.kids.map(top)));
+    const base=bot(H)+28;
+    const step=n>1 ? Math.max(4,Math.min(12,(firstTop-10-base)/(n-1))) : 0;
+    const levels=gs.map((_,i)=>base+i*step);
+    // Number of crossings for a given assignment of bar heights.
+    const cost=lv=>{
+      let c=0;
+      gs.forEach((g,a)=>gs.forEach((o,b)=>{
+        if(a===b) return;
+        const inside=x=>x>o.min-1 && x<o.max+1;
+        if(lv[b]>g.y0 && lv[b]<lv[a] && inside(g.x)) c++;
+        if(lv[b]>lv[a]) g.kids.forEach(k=>{ if(inside(cx(k))) c++; });
+      }));
+      return c;
+    };
+    let bestLv=levels, bestCost=cost(levels);
+    const permute=(rest,picked)=>{
+      if(!rest.length){
+        const lv=picked.map(i=>levels[i]), c=cost(lv);
+        if(c<bestCost){ bestCost=c; bestLv=lv; }
+        return;
+      }
+      rest.forEach(i=>permute(rest.filter(j=>j!==i),[...picked,i]));
+    };
+    if(n>1 && n<=5 && bestCost>0) permute(gs.map((_,i)=>i),[]);
+    // These bars often run past other families (a son married into a family
+    // placed between him and his father). Their background-coloured edges go
+    // down first, so the lines they pass over look interrupted, not joined.
+    gs.forEach((g,a)=>{ if(g.max>g.min) haloSeg(g.min+4,bestLv[a],g.max-4,bestLv[a]); });
+    gs.forEach((g,a)=>{
+      const y=bestLv[a];
+      seg(g.x,g.y0,g.x,y,GREEN);
+      if(g.max>g.min) seg(g.min,y,g.max,y,GREEN);
+      g.kids.forEach(k=>seg(cx(k),y,cx(k),top(k),GREEN));
+    });
+  }
+
+  function drawFamily({pids,cids}){
     const parents  = pids.map(id=>state.people[id]).filter(Boolean);
     const children = cids.map(id=>state.people[id]).filter(Boolean);
     if(!parents.length||!children.length) return;
@@ -1577,13 +1719,10 @@ function drawConnectors(){
     // Stem from parent coupling point down to children bar
     seg(coupleX, jY, coupleX, chiBarY, GREEN);
 
-    // Horizontal bar across children (only if >1 child, and only if needed)
-    if(children.length > 1){
-      seg(chiMinX, chiBarY, chiMaxX, chiBarY, GREEN);
-    } else if(coupleX !== chiXs[0]){
-      // single child offset from stem — connect horizontally
-      seg(coupleX, chiBarY, chiXs[0], chiBarY, GREEN);
-    }
+    // Horizontal bar across the children, always reaching the stem so the
+    // parents never look detached when the children sit off to one side.
+    const barMinX = Math.min(chiMinX, coupleX), barMaxX = Math.max(chiMaxX, coupleX);
+    if(barMaxX > barMinX) seg(barMinX, chiBarY, barMaxX, chiBarY, GREEN);
 
     // Drop from children bar down to each child top
     children.forEach(c=>seg(cx(c),chiBarY,cx(c),top(c),GREEN));
@@ -1591,7 +1730,7 @@ function drawConnectors(){
     // Label sits just above children bar
     const labelX=(chiMinX+chiMaxX)/2;
     lbl(labelX, chiBarY-6, 'child', GREEN);
-  });
+  }
 }
 
 function makeDraggable(card, id){
@@ -1653,18 +1792,18 @@ function computeGenerations(){
 }
 
 function renderGenView(){
-  const { gen, maxGen } = computeGenerations();
+  // Same generations as the tree's Generation Layout, with partners kept together.
+  const { blocksByGen, maxGen } = buildFamilyLayoutBlocks();
+  const { badge } = marriageInfo();
   const content = document.getElementById('gen-content');
   content.innerHTML = '';
   if(!Object.keys(state.people).length){
     content.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:60px 0;font-size:13px">Add people in the Tree view first.</div>';
     return;
   }
-  const byGen = {};
-  Object.keys(state.people).forEach(id => { const g = gen[id]||0; if(!byGen[g]) byGen[g] = []; byGen[g].push(id); });
   const genLabels = ['Great-great-grandparents','Great-grandparents','Grandparents','Parents','You / Siblings','Children','Grandchildren','Great-grandchildren'];
   for(let g = 0; g <= maxGen; g++){
-    const ids = byGen[g]||[]; if(!ids.length) continue;
+    const blocks = blocksByGen[g]||[]; if(!blocks.length) continue;
     if(g > 0){
       const div = document.createElement('div');
       div.className = 'gen-divider';
@@ -1676,15 +1815,20 @@ function renderGenView(){
     content.appendChild(label);
     const row = document.createElement('div');
     row.className = 'gen-row';
-    ids.forEach(id => {
-      const p = state.people[id]; const gc = gClass(p.gender);
-      const card = document.createElement('div');
-      card.className = 'gen-card'; card.onclick = () => viewPerson(id);
-      const photoHtml = p.photo
-        ? `<img class="gen-card-photo" src="${p.photo}" alt="">`
-        : `<div class="gen-card-placeholder ${gc}">${personSVG(gc)}</div>`;
-      card.innerHTML = `${photoHtml}<div class="gen-card-body"><div class="gen-card-name">${fullName(p)}</div><div class="gen-card-life">${lifespan(p)||'&nbsp;'}</div></div>`;
-      row.appendChild(card);
+    blocks.forEach(block => {
+      const couple = document.createElement('div');
+      couple.className = 'gen-couple';
+      block.members.forEach(id => {
+        const p = state.people[id]; const gc = gClass(p.gender);
+        const card = document.createElement('div');
+        card.className = 'gen-card'; card.onclick = () => viewPerson(id);
+        const photoHtml = p.photo
+          ? `<img class="gen-card-photo" src="${p.photo}" alt="">`
+          : `<div class="gen-card-placeholder ${gc}">${personSVG(gc)}</div>`;
+        card.innerHTML = `${photoHtml}<div class="gen-card-body"><div class="gen-card-name">${fullName(p)}</div><div class="gen-card-life">${lifespan(p)||'&nbsp;'}</div>${badge[id] ? `<div class="gen-card-badge">${badge[id]}</div>` : ''}</div>`;
+        couple.appendChild(card);
+      });
+      row.appendChild(couple);
     });
     content.appendChild(row);
   }
@@ -1926,15 +2070,247 @@ function saveRelationship(){
 // ═══════════════════════════════════════
 // LAYOUT
 // ═══════════════════════════════════════
-function genLayout(){
-  const { gen, maxGen } = computeGenerations();
-  const byGen = {};
-  Object.keys(state.people).forEach(id => { const g = gen[id]||0; if(!byGen[g]) byGen[g] = []; byGen[g].push(id); });
-  for(let g = 0; g <= maxGen; g++){
-    const ids = byGen[g]||[];
-    const startX = Math.max(60, (window.innerWidth - ids.length * 192) / 2);
-    ids.forEach((id, i) => { state.people[id].x = startX + i*192; state.people[id].y = 60 + g*240; });
+const marriageLabel = n => 'Marriage ' + n;
+const halfSiblingLabel = { male: 'paternal half-sibling', female: 'maternal half-sibling' };
+
+// For people with more than one partner: the order of their marriages and a
+// half-sibling badge for the children of every marriage except the main line.
+// Marriages are ordered by their children's birth years when all of them have
+// one, otherwise by the order the partners were added (the family order in a
+// GEDCOM file). The main line is the marriage with the most descendants.
+function marriageInfo(){
+  const partners = {}, parents = {}, kids = {};
+  const add = (map, key, val) => { if(!map[key]) map[key] = []; if(!map[key].includes(val)) map[key].push(val); };
+  state.relationships.forEach(r => {
+    if(!state.people[r.a] || !state.people[r.b] || r.a === r.b) return;
+    if(r.type === 'partner'){ add(partners, r.a, r.b); add(partners, r.b, r.a); }
+    else if(r.type === 'parent' || r.type === 'child'){
+      const par = r.type === 'parent' ? r.a : r.b, ch = r.type === 'parent' ? r.b : r.a;
+      add(parents, ch, par); add(kids, par, ch);
+    }
+  });
+  const year = id => { const m = String(state.people[id].birth || '').match(/\d{4}/); return m ? +m[0] : null; };
+  const descendants = ids => {
+    const seen = new Set(), stack = [...ids];
+    while(stack.length){ const id = stack.pop(); if(seen.has(id)) continue; seen.add(id); (kids[id] || []).forEach(c => stack.push(c)); }
+    return seen.size;
+  };
+  const order = {}, number = {}, badge = {}, mainOf = {};
+  Object.entries(partners).forEach(([id, ps]) => {
+    if(ps.length < 2) return;
+    const kidsWith = s => (kids[id] || []).filter(c => (parents[c] || []).includes(s));
+    const firstBirth = s => { const ys = kidsWith(s).map(year).filter(y => y !== null); return ys.length ? Math.min(...ys) : null; };
+    const sorted = ps.every(s => firstBirth(s) !== null) ? [...ps].sort((a, b) => firstBirth(a) - firstBirth(b)) : [...ps];
+    order[id] = sorted;
+    sorted.forEach((s, i) => { const key = [id, s].sort().join('|'); if(!number[key]) number[key] = i + 1; });
+    const main = sorted.reduce((best, s) => descendants(kidsWith(s)) > descendants(kidsWith(best)) ? s : best);
+    mainOf[id] = main;
+    const text = halfSiblingLabel[state.people[id].gender] || 'half-sibling';
+    sorted.forEach(s => { if(s !== main) kidsWith(s).forEach(c => { if(!badge[c]) badge[c] = text; }); });
+  });
+  return { order, number, badge, mainOf };
+}
+
+// Partners form one layout block (a couple, or someone with all their spouses),
+// and each block sits one generation below the blocks of its members' parents.
+function buildFamilyLayoutBlocks(){
+  const ids = Object.keys(state.people);
+  const index = Object.fromEntries(ids.map((id, i) => [id, i]));
+  const leader = Object.fromEntries(ids.map(id => [id, id]));
+  const find = id => { while(leader[id] !== id){ leader[id] = leader[leader[id]]; id = leader[id]; } return id; };
+  const unite = (a, b) => { a = find(a); b = find(b); if(a !== b) leader[b] = a; };
+  const spouseAdj = Object.fromEntries(ids.map(id => [id, new Set()]));
+  const parentIds = Object.fromEntries(ids.map(id => [id, new Set()]));
+  const childIds = Object.fromEntries(ids.map(id => [id, new Set()]));
+  state.relationships.forEach(r => {
+    if(!state.people[r.a] || !state.people[r.b] || r.a === r.b) return;
+    if(r.type === 'partner'){ unite(r.a, r.b); spouseAdj[r.a].add(r.b); spouseAdj[r.b].add(r.a); }
+    else if(r.type === 'parent' || r.type === 'child'){
+      const par = r.type === 'parent' ? r.a : r.b, ch = r.type === 'parent' ? r.b : r.a;
+      parentIds[ch].add(par); childIds[par].add(ch);
+    }
+  });
+
+  const components = new Map();
+  ids.forEach(id => {
+    const root = find(id);
+    if(!components.has(root)) components.set(root, { id: root, members: [], incoming: new Set(), outgoing: new Set(), gen: 0, order: index[id] });
+    components.get(root).members.push(id);
+  });
+  const rootOf = Object.fromEntries(ids.map(id => [id, find(id)]));
+  const blocks = [...components.values()];
+  const marriages = marriageInfo();
+
+  // Order the members of a block so each partner stands next to their spouse.
+  blocks.forEach(block => {
+    const members = block.members;
+    if(members.length < 3) return;
+    const degree = id => [...spouseAdj[id]].filter(o => members.includes(o)).length;
+    // Someone with several spouses: first spouse on the left, later ones on the right.
+    const hub = members.find(id => degree(id) === members.length - 1);
+    if(hub){
+      const rank = marriages.order[hub] || [];
+      const pos = id => rank.includes(id) ? rank.indexOf(id) : rank.length + index[id];
+      const others = members.filter(id => id !== hub).sort((a, b) => pos(a) - pos(b));
+      block.members = [others[0], hub, ...others.slice(1)];
+      return;
+    }
+    // A chain of partners: follow the spouse links.
+    const unused = new Set(members), result = [];
+    let cur = [...members].sort((a, b) => degree(a) - degree(b) || index[a] - index[b])[0];
+    while(unused.size){
+      if(!unused.has(cur)) cur = [...unused].sort((a, b) => index[a] - index[b])[0];
+      result.push(cur); unused.delete(cur);
+      const next = [...spouseAdj[cur]].filter(id => unused.has(id));
+      cur = next.length ? next.sort((a, b) => degree(a) - degree(b) || index[a] - index[b])[0] : null;
+    }
+    block.members = result;
+  });
+
+  // Parent → child edges between blocks, then generations top-down.
+  ids.forEach(child => parentIds[child].forEach(parent => {
+    const a = rootOf[parent], b = rootOf[child];
+    if(a === b) return;
+    components.get(a).outgoing.add(b); components.get(b).incoming.add(a);
+  }));
+  const inDegree = Object.fromEntries(blocks.map(b => [b.id, b.incoming.size]));
+  const queue = blocks.filter(b => !inDegree[b.id]).sort((a, b) => a.order - b.order);
+  for(let i = 0; i < queue.length; i++){
+    queue[i].outgoing.forEach(cid => {
+      const ch = components.get(cid);
+      ch.gen = Math.max(ch.gen, queue[i].gen + 1);
+      if(--inDegree[cid] === 0) queue.push(ch);
+    });
   }
+  if(queue.length < blocks.length){
+    // A relationship cycle (bad data): fall back to per-person generations without hanging.
+    const base = computeGenerations().gen;
+    blocks.filter(b => inDegree[b.id] > 0).forEach(b => { b.gen = Math.max(b.gen, ...b.members.map(id => base[id] || 0)); });
+  }
+  // Pull each family down so it sits directly above its children. Without this
+  // the parents of a married-in spouse stay in the top row and their lines skip
+  // a generation, running behind the cards in between. A "free" family (one
+  // parent family, and every family below it free too, e.g. a childless
+  // half-sibling) can follow its parents to any row, so it must not hold them
+  // up; it is put under them afterwards. Otherwise one father's children can
+  // end up in different rows.
+  const free = new Set();
+  for(let i = queue.length - 1; i >= 0; i--){
+    const b = queue[i];
+    const fixedKids = [...b.outgoing].filter(cid => !free.has(cid));
+    if(fixedKids.length) b.gen = Math.min(...fixedKids.map(cid => components.get(cid).gen)) - 1;
+    else if(b.incoming.size <= 1) free.add(b.id);
+  }
+  queue.forEach(b => {
+    if(free.has(b.id) && b.incoming.size) b.gen = Math.max(...[...b.incoming].map(pid => components.get(pid).gen)) + 1;
+  });
+  const minGen = Math.min(...blocks.map(b => b.gen));
+  blocks.forEach(b => b.gen -= minGen);
+
+  const blocksByGen = {};
+  blocks.forEach(b => { (blocksByGen[b.gen] = blocksByGen[b.gen] || []).push(b); });
+  return { blocksByGen, parentIds, childIds, marriages, maxGen: Math.max(0, ...blocks.map(b => b.gen)) };
+}
+
+// Generation layout: one row per generation, partners side by side, children
+// centred under their parents. Rows are placed by repeated down and up sweeps
+// that pull each block toward its parents and then toward its children.
+function genLayout(){
+  const { blocksByGen, parentIds, childIds, marriages, maxGen } = buildFamilyLayoutBlocks();
+  const CARD = 172, SPOUSE_GAP = 24, MULTI_SPOUSE_GAP = 64 /* room for the marriage label */, FAMILY_GAP = 48, ROW_GAP = 270;
+  const rows = [], blockOf = {};
+  for(let g = 0; g <= maxGen; g++){
+    rows[g] = (blocksByGen[g] || []).sort((a, b) => a.order - b.order);
+    rows[g].forEach(b => b.members.forEach(id => blockOf[id] = b));
+  }
+  const gapOf = b => b.members.length > 2 ? MULTI_SPOUSE_GAP : SPOUSE_GAP;
+  const width = b => b.members.length * CARD + (b.members.length - 1) * gapOf(b);
+  const cxOf = id => { const b = blockOf[id]; return b.x + b.members.indexOf(id) * (CARD + gapOf(b)) + CARD / 2; };
+  const avg = xs => xs.reduce((s, v) => s + v, 0) / xs.length;
+  // How far a block must move so its members sit under their parents (down),
+  // or so it sits centred over its children (up).
+  const pullDown = b => {
+    const shifts = b.members.filter(id => parentIds[id].size).map(id => avg([...parentIds[id]].map(cxOf)) - cxOf(id));
+    return shifts.length ? avg(shifts) : 0;
+  };
+  const pullUp = b => {
+    const kids = [...new Set(b.members.flatMap(id => [...childIds[id]]))];
+    const shifts = kids.map(c => cxOf(c) - avg([...parentIds[c]].map(cxOf)));
+    return shifts.length ? avg(shifts) : 0;
+  };
+  // The spouse who comes from the left-hand family stands on the left.
+  const orderCouple = b => {
+    if(b.members.length !== 2) return;
+    const side = id => parentIds[id].size ? avg([...parentIds[id]].map(cxOf)) : null;
+    const [l, r] = b.members.map(side);
+    if(l !== null && r !== null && l > r) b.members.reverse();
+  };
+  // Someone with several spouses: the main line's spouse stands on the side
+  // where that line's children marry into, so the line does not cross the
+  // other marriages' children. Without such a pull the first spouse stays left.
+  const orientHub = b => {
+    if(b.members.length < 3) return;
+    const hub = b.members.find(id => marriages.mainOf[id]);
+    if(!hub) return;
+    const main = marriages.mainOf[hub];
+    if(!b.members.includes(main)) return;
+    const outside = [];
+    childIds[hub].forEach(c => {
+      if(!parentIds[c].has(main)) return;
+      blockOf[c].members.forEach(m => parentIds[m].forEach(p => { if(blockOf[p] !== b) outside.push(cxOf(p)); }));
+    });
+    const side = outside.length ? main : marriages.order[hub][0];
+    const wantRight = outside.length > 0 && avg(outside) > cxOf(hub);
+    if(wantRight !== b.members.indexOf(side) > b.members.indexOf(hub)) b.members.reverse();
+  };
+  // Siblings stay together: each block belongs to the family it comes from (the
+  // parent block with the most children when it comes from two), and a row is
+  // ordered family by family, so a cousin never lands between siblings.
+  const byId = new Map(rows.flat().map(b => [b.id, b]));
+  const familyOf = new Map(rows.flat().map(b => {
+    const ps = [...b.incoming].map(id => byId.get(id)).filter(Boolean);
+    return [b, ps.length ? ps.reduce((best, p) => p.outgoing.size > best.outgoing.size ? p : best) : b];
+  }));
+  // Move blocks toward their targets without overlapping: a left-to-right and
+  // a right-to-left placement, averaged, keeps clusters centred.
+  const placeRow = (row, pull) => {
+    const want = row.map(b => ({ b, x: b.x + pull(b) }));
+    const centre = w => w.x + width(w.b) / 2;
+    const families = new Map();
+    want.forEach(w => { const f = familyOf.get(w.b); if(!families.has(f)) families.set(f, []); families.get(f).push(w); });
+    const key = new Map(), famNo = new Map();
+    [...families.values()].forEach((ws, i) => { const k = avg(ws.map(centre)); ws.forEach(w => { key.set(w, k); famNo.set(w, i); }); });
+    // Within a family, the children of one marriage stay together, in the
+    // order their parents stand in the row above.
+    const marriagePos = w => {
+      const f = familyOf.get(w.b);
+      const idx = w.b.members.flatMap(m => [...parentIds[m]].map(p => f.members.indexOf(p)).filter(i => i >= 0));
+      return idx.length ? avg(idx) : 0;
+    };
+    want.sort((p, q) => key.get(p) - key.get(q) || famNo.get(p) - famNo.get(q) || marriagePos(p) - marriagePos(q) || centre(p) - centre(q));
+    const lx = [], rx = [];
+    want.forEach((w, i) => { lx[i] = i === 0 ? w.x : Math.max(w.x, lx[i - 1] + width(want[i - 1].b) + FAMILY_GAP); });
+    for(let i = want.length - 1; i >= 0; i--){
+      rx[i] = i === want.length - 1 ? want[i].x : Math.min(want[i].x, rx[i + 1] - FAMILY_GAP - width(want[i].b));
+    }
+    want.forEach((w, i) => w.b.x = (lx[i] + rx[i]) / 2);
+    row.splice(0, row.length, ...want.map(w => w.b));
+  };
+
+  rows.forEach(row => { let x = 0; row.forEach(b => { b.x = x; x += width(b) + FAMILY_GAP; }); });
+  for(let pass = 0; pass < 8; pass++){
+    rows.forEach(row => row.forEach(orientHub));
+    for(let g = 1; g <= maxGen; g++){ rows[g].forEach(orderCouple); placeRow(rows[g], pullDown); }
+    for(let g = maxGen - 1; g >= 0; g--) placeRow(rows[g], pullUp);
+  }
+
+  const all = rows.flat();
+  const minX = Math.min(...all.map(b => b.x)), maxX = Math.max(...all.map(b => b.x + width(b)));
+  const offset = Math.max(80, (window.innerWidth - (maxX - minX)) / 2) - minX;
+  rows.forEach((row, g) => row.forEach(b => b.members.forEach((id, i) => {
+    state.people[id].x = Math.round(b.x + offset + i * (CARD + gapOf(b)));
+    state.people[id].y = 60 + g * ROW_GAP;
+  })));
   saveState(); render(); broadcast(); showToast('Generation layout applied');
 }
 

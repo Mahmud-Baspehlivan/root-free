@@ -24,7 +24,8 @@ RootFree works the other way around. Everything runs in your browser. Nothing is
 - Add people with name, photo, birth and death years, birthplace, occupation, and notes
 - Connect people as parent, child, partner, or sibling — connections can be removed individually from each person's detail view
 - Drag and reposition cards freely on an infinite canvas
-- Auto-arrange by generation or grid with one click
+- Auto-arrange by generation or grid with one click — the generation layout keeps partners side by side and each family's children together under their parents
+- Remarriages are shown clearly: numbered marriages ("Marriage 1", "Marriage 2"), each marriage's children drawn from their own couple, and half-siblings marked on their cards
 
 **Viewing your tree**
 - Tree view — freeform canvas with relationship lines
