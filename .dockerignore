@@ -1,0 +1,8 @@
+node_modules
+dist
+data
+*.db*
+*.ged
+.git
+test
+screenshot.png

@@ -1,0 +1,21 @@
+{
+  "name": "rootfree",
+  "private": true,
+  "description": "Family tree app with a small Node.js server that keeps the tree in SQLite",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "export PORT=${PORT:-8737}; node --disable-warning=ExperimentalWarning --watch server/server.ts & vite",
+    "build": "vite build",
+    "start": "node --disable-warning=ExperimentalWarning server/server.ts",
+    "typecheck": "tsc -p web && tsc -p .",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  }
+}

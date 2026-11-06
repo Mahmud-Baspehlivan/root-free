@@ -4,13 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RootFree — Family Tree</title>
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
     <div class="app">
@@ -68,32 +67,32 @@
           <button
             class="view-tab active"
             id="tab-canvas"
-            onclick="switchView('canvas')"
+            data-action="switchView" data-view="canvas"
           >
             Tree
           </button>
-          <button class="view-tab" id="tab-gen" onclick="switchView('gen')">
+          <button class="view-tab" id="tab-gen" data-action="switchView" data-view="gen">
             Generations
           </button>
-          <button class="view-tab" id="tab-list" onclick="switchView('list')">
+          <button class="view-tab" id="tab-list" data-action="switchView" data-view="list">
             People
           </button>
         </div>
 
         <div class="header-right">
-          <button class="btn" onclick="openGedcomImport()">
+          <button class="btn" data-action="openGedcomImport">
             Import GEDCOM
           </button>
-          <button class="btn" onclick="exportGedcom()">Export GEDCOM</button>
-          <button class="btn" onclick="exportJson()">Backup</button>
-          <button class="btn" onclick="importJson()">Restore</button>
-          <button class="btn btn-danger" onclick="confirmDeleteAll()">
+          <button class="btn" data-action="exportGedcom">Export GEDCOM</button>
+          <button class="btn" data-action="exportJson">Backup</button>
+          <button class="btn" data-action="importJson">Restore</button>
+          <button class="btn btn-danger" data-action="confirmDeleteAll">
             Delete All
           </button>
           <button
             class="dark-toggle"
             id="dark-toggle"
-            onclick="toggleDark()"
+            data-action="toggleDark"
             title="Toggle dark mode"
           >
             ◐
@@ -154,16 +153,16 @@
 
     <!-- TOOLBAR -->
     <div class="toolbar" id="main-toolbar">
-      <button class="tb-btn primary" id="tb-add" onclick="openAddPerson()">
+      <button class="tb-btn primary" id="tb-add" data-action="openAddPerson">
         Add Person
       </button>
       <div class="tb-sep"></div>
-      <button class="tb-btn" onclick="genLayout()">Generation Layout</button>
-      <button class="tb-btn" onclick="gridLayout()">Grid</button>
+      <button class="tb-btn" data-action="genLayout">Generation Layout</button>
+      <button class="tb-btn" data-action="gridLayout">Grid</button>
       <div class="tb-sep"></div>
-      <button class="tb-btn" onclick="zoomIn()">+</button>
-      <button class="tb-btn" onclick="zoomOut()">−</button>
-      <button class="tb-btn" onclick="resetZoom()">Reset</button>
+      <button class="tb-btn" data-action="zoomIn">+</button>
+      <button class="tb-btn" data-action="zoomOut">−</button>
+      <button class="tb-btn" data-action="resetZoom">Reset</button>
     </div>
 
     <!-- LEGEND -->
@@ -198,7 +197,7 @@
       <div class="modal">
         <div class="modal-header">
           <h2 id="modal-add-title">Add Person</h2>
-          <button class="modal-close" onclick="closeModal('modal-add')">
+          <button class="modal-close" data-action="closeModal" data-modal="modal-add">
             ✕
           </button>
         </div>
@@ -208,13 +207,13 @@
             <div
               class="photo-zone"
               id="photo-zone"
-              onclick="triggerPhotoUpload()"
+              data-action="triggerPhotoUpload"
             >
               <input
                 type="file"
                 id="photo-file-input"
                 accept="image/*"
-                onchange="handlePhotoUpload(event)"
+               
               />
               <img id="photo-preview" style="display: none" alt="Preview" />
               <div id="photo-placeholder">
@@ -225,7 +224,7 @@
               </div>
               <div id="photo-remove" style="display: none; margin-top: 6px">
                 <button
-                  onclick="removePhoto(event)"
+                  data-action="removePhoto"
                   style="
                     font-size: 11px;
                     color: var(--danger);
@@ -307,8 +306,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
-          <button class="btn btn-primary" onclick="savePerson()">Save</button>
+          <button class="btn" data-action="closeModal" data-modal="modal-add">Cancel</button>
+          <button class="btn btn-primary" data-action="savePerson">Save</button>
         </div>
       </div>
     </div>
@@ -318,7 +317,7 @@
       <div class="modal">
         <div class="modal-header">
           <h2>Add Connection</h2>
-          <button class="modal-close" onclick="closeModal('modal-rel')">
+          <button class="modal-close" data-action="closeModal" data-modal="modal-rel">
             ✕
           </button>
         </div>
@@ -329,7 +328,7 @@
               <button
                 class="rel-option selected"
                 data-rel="parent"
-                onclick="selectRelType(this)"
+                data-action="selectRelType"
               >
                 <div class="rel-option-title">Parent of</div>
                 <div class="rel-option-sub">This person is a parent</div>
@@ -337,7 +336,7 @@
               <button
                 class="rel-option"
                 data-rel="child"
-                onclick="selectRelType(this)"
+                data-action="selectRelType"
               >
                 <div class="rel-option-title">Child of</div>
                 <div class="rel-option-sub">This person is a child</div>
@@ -345,7 +344,7 @@
               <button
                 class="rel-option"
                 data-rel="partner"
-                onclick="selectRelType(this)"
+                data-action="selectRelType"
               >
                 <div class="rel-option-title">Partner of</div>
                 <div class="rel-option-sub">Spouse or partner</div>
@@ -353,7 +352,7 @@
               <button
                 class="rel-option"
                 data-rel="sibling"
-                onclick="selectRelType(this)"
+                data-action="selectRelType"
               >
                 <div class="rel-option-title">Sibling of</div>
                 <div class="rel-option-sub">Brother or sister</div>
@@ -366,8 +365,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn" onclick="closeModal('modal-rel')">Cancel</button>
-          <button class="btn btn-primary" onclick="saveRelationship()">
+          <button class="btn" data-action="closeModal" data-modal="modal-rel">Cancel</button>
+          <button class="btn btn-primary" data-action="saveRelationship">
             Connect
           </button>
         </div>
@@ -379,14 +378,14 @@
       <div class="modal">
         <div class="modal-header" id="view-header">
           <h2 id="view-name">Person</h2>
-          <button class="modal-close" onclick="closeModal('modal-view')">
+          <button class="modal-close" data-action="closeModal" data-modal="modal-view">
             ✕
           </button>
         </div>
         <div class="modal-body" id="view-body"></div>
         <div class="modal-footer">
           <button class="btn btn-danger" id="view-delete-btn">Delete</button>
-          <button class="btn" onclick="closeModal('modal-view')">Close</button>
+          <button class="btn" data-action="closeModal" data-modal="modal-view">Close</button>
           <button class="btn btn-primary" id="view-edit-btn">Edit</button>
         </div>
       </div>
@@ -397,7 +396,7 @@
       <div class="modal">
         <div class="modal-header">
           <h2>Delete All Data</h2>
-          <button class="modal-close" onclick="closeModal('modal-delete')">
+          <button class="modal-close" data-action="closeModal" data-modal="modal-delete">
             ✕
           </button>
         </div>
@@ -418,19 +417,16 @@
           </p>
         </div>
         <div class="modal-footer">
-          <button class="btn" onclick="closeModal('modal-delete')">
+          <button class="btn" data-action="closeModal" data-modal="modal-delete">
             Cancel
           </button>
           <button
             class="btn"
-            onclick="
-              exportJson();
-              closeModal('modal-delete');
-            "
+            data-action="exportFirst"
           >
             Export first
           </button>
-          <button class="btn btn-danger" onclick="deleteAllData()">
+          <button class="btn btn-danger" data-action="deleteAllData">
             Delete Everything
           </button>
         </div>
@@ -442,7 +438,7 @@
       <div class="modal">
         <div class="modal-header">
           <h2>Import GEDCOM</h2>
-          <button class="modal-close" onclick="closeModal('modal-gedcom')">
+          <button class="modal-close" data-action="closeModal" data-modal="modal-gedcom">
             ✕
           </button>
         </div>
@@ -474,24 +470,16 @@
           ></div>
         </div>
         <div class="modal-footer">
-          <button class="btn" onclick="closeModal('modal-gedcom')">
+          <button class="btn" data-action="closeModal" data-modal="modal-gedcom">
             Cancel
           </button>
-          <button class="btn btn-primary" onclick="doGedcomImport()">
+          <button class="btn btn-primary" data-action="doGedcomImport">
             Import
           </button>
         </div>
       </div>
     </div>
 
-    <script src="js/state.js"></script>
-    <script src="js/tree-view.js"></script>
-    <script src="js/connectors.js"></script>
-    <script src="js/canvas-nav.js"></script>
-    <script src="js/views.js"></script>
-    <script src="js/people.js"></script>
-    <script src="js/layout.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

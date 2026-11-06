@@ -1,134 +1,92 @@
-# RootFree
+# RootFree — shared family tree
 
-A free, private family tree builder that runs entirely in your browser.
-
-No account. No subscription. No server. Your family's history stays on your device.
-
-**Live app → [mip555.github.io/root-free](https://mip555.github.io/root-free)**
+A family tree app for one family, shared by everyone who has the link. It started as a fork of [Mip555/root-free](https://github.com/Mip555/root-free), a single-file, browser-only tree builder. This version keeps the tree on a small Node.js server in SQLite, so the whole family sees and edits the same tree from any device, including phones.
 
 ![RootFree](screenshot.png)
 
----
-
-## The problem with existing tools
-
-Ancestry, MyHeritage, and similar services charge monthly fees, lock your data in proprietary formats, and make their business by owning access to your family's history. When you stop paying, you lose access.
-
-RootFree works the other way around. Everything runs in your browser. Nothing is sent anywhere. You own the data completely, and you can delete it all in one click.
-
----
-
 ## Features
 
-**Building your tree**
-- Add people with name, photo, birth and death years, birthplace, occupation, and notes
-- Connect people as parent, child, partner, or sibling — connections can be removed individually from each person's detail view
-- Drag and reposition cards freely on an infinite canvas
-- Auto-arrange by generation or grid with one click
+**Building the tree**
+- People with name, photo, birth and death years, birthplace, occupation and notes
+- Parent, child, partner and sibling connections
+- Drag cards freely, or arrange them by generation or in a grid with one click
+- GEDCOM 5.5.1 import and export, JSON backup and restore
 
-**Viewing your tree**
-- Tree view — freeform canvas with relationship lines
-- Generations view — automatically groups family by generation, from great-grandparents down to grandchildren
-- People view — alphabetical table of everyone in the tree
+**Generation layout**
+- Partners stand side by side and each family's children stay together under their parents
+- Generations are worked out per couple, so lines never skip a row or run behind cards
+- Remarriages: numbered marriages ("1. evlilik", "2. evlilik"), each marriage's children drawn from their own couple, a bridge over the row for a third spouse, and a half-sibling badge ("baba bir kardeş" / "anne bir kardeş")
 
-**Sharing**
-- Share a live link with family members — changes sync peer-to-peer in real time
-- Choose edit or view-only access when sharing
-- No server involved — data travels directly between browsers
-- Session ends when everyone closes the tab
+**Moving around**
+- Drag empty space to pan
+- Pinch, or Ctrl/⌘ + scroll, to zoom around the pointer; two-finger pinch on phones
+- Tree, Generations and People views
 
-**Data portability**
-- Import GEDCOM files from Ancestry, MyHeritage, FamilySearch, and any compatible app
-- Export to GEDCOM 5.5.1 — the universal genealogy standard
-- Backup and restore as JSON
-- One-click permanent delete
+**Shared data**
+- The tree lives on the server. Every change is saved straight away, and only the changed fields are sent, so two people editing different things never overwrite each other.
+- Changes made by others show up when the page is reloaded.
 
----
+> **No login.** Anyone with the link can view and change the tree. Keep the link within the family.
 
-## Privacy
+## Running locally
 
-**Solo mode** — all data is stored in your browser's `localStorage`. Nothing is sent to any server, ever. Clearing your browser storage erases your tree, so export a backup regularly.
-
-**Shared mode** — when you share a tree, data travels directly between browsers using WebRTC peer-to-peer. The signalling server (PeerJS) facilitates the connection but never sees your family data. When the session ends, nothing persists anywhere outside the participants' browsers.
-
-There is no analytics, no tracking, and no backend. The entire product is a single HTML file.
-
----
-
-## Getting started
-
-### Use it in the browser
-
-Open [mip555.github.io/root-free](https://mip555.github.io/root-free) — no install needed.
-
-### Run it locally
-
-Download `index.html` and open it directly in any modern browser. No server, no build step, no dependencies.
+Requires Node.js 22.18 or newer (Node runs the server's TypeScript directly).
 
 ```bash
-git clone https://github.com/Mip555/root-free.git
-cd root-free
-open index.html      # macOS
-xdg-open index.html  # Linux
-start index.html     # Windows
+npm install
+npm run dev        # server on :8737 + Vite dev server; open the URL Vite prints
 ```
 
-### Self-host
+The database is created at `data/rootfree.db`.
 
-Upload `index.html` to any static host — GitHub Pages, Netlify, Vercel, or your own server. No backend required.
+```bash
+npm test           # server tests
+npm run typecheck  # TypeScript, browser app and server
+npm run build      # builds the browser app into dist/
+npm start          # serves dist/ and the API on :3000
+```
 
----
+## Deploying
 
-## GEDCOM
+The `Dockerfile` builds the app and runs the server on port 3000. Mount a persistent volume at `/data`, which is where the SQLite database lives.
 
-[GEDCOM](https://en.wikipedia.org/wiki/GEDCOM) is the standard interchange format for genealogical data, supported by virtually every family tree platform.
+```bash
+docker build -t rootfree .
+docker run -p 3000:3000 -v rootfree-data:/data rootfree
+```
 
-RootFree imports and exports GEDCOM 5.5.1, including names, birth and death years, birthplaces, occupations, genders, notes, and family relationships.
+| Variable | Default | |
+|---|---|---|
+| `PORT` | `3000` | HTTP port |
+| `DB_PATH` | `data/rootfree.db` (`/data/rootfree.db` in Docker) | SQLite database file |
+| `PUBLIC_DIR` | `dist` | Built browser app |
 
-**Import from:** Ancestry, MyHeritage, FamilySearch, MacFamilyTree, Gramps, Legacy Family Tree, and any app that exports `.ged` files.
+## How it is put together
 
-**Export to:** Any of the above. Your data is never trapped.
+```
+web/            browser app (TypeScript, built with Vite)
+  index.html
+  src/main.ts        entry point; buttons use data-action, one click handler
+  src/sync.ts        loads the tree from the server, sends only what changed
+  src/layout.ts      generation layout and marriage numbering
+  src/connectors.ts  the lines between cards
+  src/…              tree view, zoom/pan, dialogs, GEDCOM, views
+server/         Node.js server (TypeScript, run directly by Node)
+  server.ts          static files + API
+  db.ts              SQLite schema, validation, changes
+test/           server tests (node:test)
+```
 
----
+API:
 
-## Roadmap
-
-Contributions welcome on any of these:
-
-- [ ] Timeline view — births, deaths, and events on a horizontal axis
-- [ ] Print and PDF export
-- [ ] Mobile touch support for dragging
-- [ ] Dark mode
-- [ ] Multiple trees
-- [ ] Relationship suggestions — detect likely missing connections
-- [ ] DNA match comparison — compare exported trees to find shared ancestors
-
----
-
-## Contributing
-
-RootFree is a single HTML file with no build process. If you know HTML, CSS, and JavaScript, you can contribute without any setup.
-
-1. Fork this repository
-2. Edit `index.html`
-3. Open it in your browser to test your changes
-4. Open a pull request describing what you changed and why
-
-For significant changes, open an issue first so we can discuss the approach.
-
----
-
-## Browser support
-
-| Browser | Status |
+| | |
 |---|---|
-| Chrome / Edge | Full support |
-| Firefox | Full support |
-| Safari | Full support |
-| Mobile | Usable — drag not yet optimised for touch |
+| `GET /api/tree` | `{ people: { id: {...} }, relationships: [{ a, b, type }] }`, relationships in the order they were added |
+| `POST /api/changes` | `{ people: { upsert: [...], delete: [...] }, relationships: { add: [...], delete: [...] } }`, applied atomically |
+| `GET /api/health` | `{ ok: true }` |
 
----
+The family's data never goes into this repository: `*.ged` and `*.db` files are git-ignored.
 
 ## License
 
-MIT. Free to use, modify, and distribute. See [LICENSE](LICENSE).
+MIT, like the original project.
