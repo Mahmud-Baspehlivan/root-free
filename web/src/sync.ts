@@ -5,7 +5,11 @@
 // server last confirmed and sends only the differences: new and changed
 // people (changed fields only), removed people, and added or removed
 // relationships. Two people editing different parts of the tree therefore
-// never overwrite each other. Changes made by others show up on reload.
+// never overwrite each other.
+//
+// Changes made by others arrive on their own: the page asks the server every
+// few seconds whether the tree changed (an ETag makes "no" an empty answer)
+// and takes the new tree when this browser has nothing unsaved.
 
 import { t } from "./i18n.ts";
 import { replaceTree, showToast, state } from "./state.ts";
@@ -14,12 +18,15 @@ import { render, revealTree } from "./tree-view.ts";
 
 const TEXT_FIELDS = ["first", "last", "birth", "death", "gender", "place", "occupation", "notes"] as const;
 const RETRY_MS = 5000;
+const CHECK_MS = 15000;
 
 /** What the server has, as far as this browser knows. */
 let synced: Tree = { people: {}, relationships: [] };
 let inFlight = false;
 let pendingAgain = false;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
+/** The server's version of the tree last seen here. */
+let etag: string | null = null;
 
 interface Changes {
   people: { upsert: Array<Partial<Person> & { id: string }>; delete: string[] };
@@ -33,6 +40,7 @@ export async function loadState(): Promise<void> {
     const tree = normalizeTree(await res.json());
     replaceTree(tree);
     synced = copy(tree);
+    etag = res.headers.get("etag");
   } catch (e) {
     console.error(e);
     showToast(t("loadFailed"), 8000);
@@ -73,6 +81,44 @@ export function saveState(): void {
         saveState();
       }
     });
+}
+
+let checking = false;
+
+/** Look for changes made by others and take them when nothing here is in the way.
+ * `canApply` says whether the page is free (no dialog open, no card being
+ * dragged); `applied` redraws. Otherwise the next check tries again. */
+async function checkForChanges(canApply: () => boolean, applied: () => void): Promise<void> {
+  if (checking || document.visibilityState !== "visible") return;
+  checking = true;
+  try {
+    const res = await fetch("/api/tree", { cache: "no-store", headers: etag ? { "If-None-Match": etag } : {} });
+    if (res.status === 304 || !res.ok) return;
+    const tree = normalizeTree(await res.json());
+    const tag = res.headers.get("etag");
+    // This browser's own save also gives a new version: nothing new to show.
+    if (sameTree(tree, synced)) {
+      etag = tag;
+      return;
+    }
+    if (hasUnsavedChanges() || !canApply()) return;
+    replaceTree(tree);
+    synced = copy(tree);
+    etag = tag;
+    applied();
+  } catch (e) {
+    console.error(e);
+  } finally {
+    checking = false;
+  }
+}
+
+/** Check for others' changes every few seconds, and whenever the page comes back into view. */
+export function watchForChanges(canApply: () => boolean, applied: () => void): void {
+  const check = () => void checkForChanges(canApply, applied);
+  setInterval(check, CHECK_MS);
+  document.addEventListener("visibilitychange", check);
+  window.addEventListener("focus", check);
 }
 
 /** True while some changes have not reached the server yet. */
@@ -150,6 +196,18 @@ function normalizeTree(data: unknown): Tree {
   const people: Record<string, Person> = {};
   for (const [id, p] of Object.entries(raw.people ?? {})) people[id] = personRecord({ ...p, id });
   return { people, relationships: (raw.relationships ?? []).map((r) => ({ a: r.a, b: r.b, type: r.type })) };
+}
+
+/** Same people and relationships, whatever the order they are listed in. */
+function sameTree(a: Tree, b: Tree): boolean {
+  const canon = (t: Tree) =>
+    JSON.stringify([
+      Object.keys(t.people)
+        .sort()
+        .map((id) => personRecord(t.people[id])),
+      t.relationships.map((r) => `${r.a}|${r.b}|${r.type}`).sort(),
+    ]);
+  return canon(a) === canon(b);
 }
 
 const text = (v: unknown): string => (v == null ? "" : String(v));

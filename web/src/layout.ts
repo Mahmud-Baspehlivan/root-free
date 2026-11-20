@@ -5,7 +5,7 @@ import { t } from "./i18n.ts";
 import { showToast, state } from "./state.ts";
 import { saveState } from "./sync.ts";
 import { render } from "./tree-view.ts";
-import type { Gender } from "./types.ts";
+import type { Gender, Person, Relationship } from "./types.ts";
 
 // Labels for people with several marriages.
 export const marriageLabel = (n: number): string => t("marriage", { n });
@@ -29,6 +29,7 @@ export interface MarriageInfo {
 // one, otherwise by the order the partners were added (the family order in a
 // GEDCOM file). The main line is the marriage with the most descendants.
 export function marriageInfo(): MarriageInfo {
+  if (wholeTreeMarriages) return wholeTreeMarriages;
   const partners: Record<string, string[]> = {},
     parents: Record<string, string[]> = {},
     kids: Record<string, string[]> = {};
@@ -259,6 +260,28 @@ export function genLayout(): void {
   saveState();
   render();
   showToast(t("arranged"));
+}
+
+/** Marriage information of the whole tree, while part of it is being laid out. */
+let wholeTreeMarriages: MarriageInfo | null = null;
+
+/** Lay out part of the tree (the people shown when branches are closed),
+ * setting the positions on these person objects only. Marriage order and
+ * the main line still come from the whole tree, so they do not change when a
+ * branch is closed. */
+export function withPartOfTree(people: Record<string, Person>, relationships: Relationship[]): void {
+  const marriages = marriageInfo();
+  const whole = { people: state.people, relationships: state.relationships };
+  state.people = people;
+  state.relationships = relationships;
+  wholeTreeMarriages = marriages;
+  try {
+    arrangeByGeneration();
+  } finally {
+    state.people = whole.people;
+    state.relationships = whole.relationships;
+    wholeTreeMarriages = null;
+  }
 }
 
 // Generation layout: one row per generation, partners side by side, children

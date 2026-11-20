@@ -195,23 +195,123 @@ body {
   left: 0;
   z-index: 1;
 }
-/* Grid lives on the scroll container itself; "local" makes it scroll
-   with the content and cover the whole scrollable area, not just the
-   first screen. Drag empty space to pan the canvas. */
+/* Drag empty space to pan the canvas. */
 #view-canvas {
   --grid: color-mix(in srgb, var(--border) 35%, transparent);
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-attachment: local;
   cursor: grab;
   /* One finger scrolls natively; pinch is handled in initCanvasZoom. */
   touch-action: pan-x pan-y;
 }
+/* The grid is made of plain 1px lines inside the tree (see drawGrid), so it
+   scales and moves with the tree. A CSS gradient grid looks the same but
+   costs about five times more to draw while scrolling, which made slow
+   phones stutter. The lines stay 1px on screen at any zoom. */
+#grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#grid i {
+  position: absolute;
+  background: var(--grid);
+}
+#grid .gx {
+  top: 0;
+  bottom: 0;
+  width: calc(1px / var(--zoom, 1));
+}
+#grid .gy {
+  left: 0;
+  right: 0;
+  height: calc(1px / var(--zoom, 1));
+}
 #view-canvas.panning {
   cursor: grabbing;
   user-select: none;
+}
+
+/* ── SEARCH (see search.ts) ── */
+.search {
+  position: fixed;
+  top: 64px;
+  left: 16px;
+  z-index: 60;
+  width: 280px;
+}
+.search-toggle {
+  display: none;
+}
+#search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--border);
+  border-radius: 19px;
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8a84' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E")
+    no-repeat 12px center / 15px;
+  color: var(--text);
+  font: 14px Inter, sans-serif;
+  box-shadow: var(--shadow-md);
+  outline: none;
+}
+#search-input:focus {
+  border-color: var(--green-mid);
+}
+#search-results {
+  margin-top: 6px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+}
+.search-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: Inter, sans-serif;
+}
+.search-item.active,
+.search-item:hover {
+  background: var(--green-light);
+}
+.search-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.search-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-mid);
+}
+.search-empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-mid);
+}
+/* The card picked in the search lights up for a moment. */
+.person-card.found {
+  animation: found 2.5s ease-out;
+}
+@keyframes found {
+  0%,
+  60% {
+    box-shadow: 0 0 0 4px var(--accent), var(--shadow-md);
+  }
+  100% {
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 /* ── WELCOME ── */
@@ -268,10 +368,13 @@ body {
   user-select: none;
   z-index: 10;
 }
-.person-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-  border-color: var(--border-mid);
+/* Only with a mouse: on a touch screen a tap would leave the card lifted. */
+@media (hover: hover) {
+  .person-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+    border-color: var(--border-mid);
+  }
 }
 .person-card.dragging {
   box-shadow: var(--shadow-lg);
@@ -381,6 +484,38 @@ body {
   color: #fff;
 }
 /* New cards are highlighted for a moment after adding relatives. */
+/* Under a parent's card: closes / opens the branch below (see collapse.ts).
+   It sits on the card's bottom edge, where the line to the children starts. */
+.card-branch {
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
+  z-index: 2;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-mid);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-mid);
+  font: 600 11px/20px Inter, sans-serif;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.card-branch:hover {
+  color: var(--green);
+  border-color: var(--green);
+}
+.card-branch.closed {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+/* With closed branches the cards are not dragged (see makeDraggable). */
+#tree-canvas.partial .person-card {
+  cursor: default;
+}
 .person-card.just-added {
   box-shadow: 0 0 0 3px var(--green-mid), var(--shadow-md);
 }
@@ -1340,6 +1475,48 @@ body.dark .data-table tr:hover td {
   .relation-option {
     padding: 12px 6px;
     font-size: 13px;
+  }
+  .search {
+    top: 60px;
+    left: 8px;
+    width: auto;
+  }
+  .search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-mid);
+    box-shadow: var(--shadow-md);
+  }
+  .search #search-input,
+  .search #search-results {
+    display: none;
+  }
+  .search.open {
+    right: 8px;
+  }
+  .search.open .search-toggle {
+    display: none;
+  }
+  .search.open #search-input {
+    display: block;
+    height: 42px;
+    font-size: 16px;
+  }
+  .search.open #search-results:not([hidden]) {
+    display: block;
+  }
+  .card-branch {
+    min-width: 30px;
+    height: 28px;
+    bottom: -14px;
+    font-size: 13px;
+    line-height: 26px;
   }
   .card-add {
     width: 32px;

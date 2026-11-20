@@ -3,6 +3,7 @@
 
 import { t, type Key } from "./i18n.ts";
 import { arrangeByGeneration, marriageInfo, marriageLabel } from "./layout.ts";
+import { reveal } from "./collapse.ts";
 import {
   MANY,
   defaultGender,
@@ -159,6 +160,8 @@ export function saveRelatives(): void {
   // The tree is rearranged so the new people stand next to their family.
   arrangeByGeneration();
   saveState();
+  // A new child of someone whose branch is closed: open it, so they can be seen.
+  reveal(plan.people.map((p) => p.id));
   render();
   if (ui.view === "gen") renderGenView();
   if (ui.view === "list") renderListView();

@@ -2,7 +2,8 @@
 
 import { t } from "./i18n.ts";
 import { marriageInfo, marriageLabel } from "./layout.ts";
-import { el, state } from "./state.ts";
+import { shownTree } from "./collapse.ts";
+import { el } from "./state.ts";
 import type { Person } from "./types.ts";
 
 const GREEN = "#2d6a4f",
@@ -32,6 +33,8 @@ interface MarriageGroup {
 }
 
 export function drawConnectors(): void {
+  // The people on the canvas: with closed branches, only the visible ones.
+  const tree = shownTree();
   const svg = el("connector-svg") as unknown as SVGSVGElement;
   svg.innerHTML = "";
 
@@ -99,7 +102,7 @@ export function drawConnectors(): void {
     if (Math.abs((a.y || 0) - (b.y || 0)) >= 5) return false;
     const l = Math.min(a.x || 0, b.x || 0),
       r = Math.max(a.x || 0, b.x || 0);
-    return Object.values(state.people).some(
+    return Object.values(tree.people).some(
       (p) => p !== a && p !== b && Math.abs((p.y || 0) - (a.y || 0)) < 5 && (p.x || 0) > l && (p.x || 0) < r,
     );
   };
@@ -107,11 +110,11 @@ export function drawConnectors(): void {
   // Partners: a short line between cards that stand side by side, a bridge
   // over the row when another card stands between them, otherwise a curve.
   // Someone with several partners gets numbered marriages.
-  state.relationships
+  tree.relationships
     .filter((r) => r.type === "partner")
     .forEach((rel) => {
-      const a = state.people[rel.a],
-        b = state.people[rel.b];
+      const a = tree.people[rel.a],
+        b = tree.people[rel.b];
       if (!a || !b) return;
       const no = marriageNo(rel.a, rel.b);
       const text = no ? marriageLabel(no) : t("linePartner");
@@ -138,11 +141,11 @@ export function drawConnectors(): void {
     });
 
   // Siblings: a simple curve.
-  state.relationships
+  tree.relationships
     .filter((r) => r.type === "sibling")
     .forEach((rel) => {
-      const a = state.people[rel.a],
-        b = state.people[rel.b];
+      const a = tree.people[rel.a],
+        b = tree.people[rel.b];
       if (!a || !b) return;
       bez(cx(a), mid(a), cx(b), mid(b), SIBLING, "4 3");
       lbl((cx(a) + cx(b)) / 2, (mid(a) + mid(b)) / 2 - 8, t("lineSibling"), SIBLING);
@@ -150,7 +153,7 @@ export function drawConnectors(): void {
 
   // Children grouped by their exact set of parents.
   const byChild: Record<string, string[]> = {};
-  state.relationships.forEach((r) => {
+  tree.relationships.forEach((r) => {
     const pair = r.type === "parent" ? { pid: r.a, cid: r.b } : r.type === "child" ? { pid: r.b, cid: r.a } : null;
     if (!pair) return;
     const list = (byChild[pair.cid] ??= []);
@@ -166,16 +169,63 @@ export function drawConnectors(): void {
   // Children of someone with several marriages are drawn per marriage (see
   // drawMarriageLines); everything else uses the plain couple drawing.
   const hubGroups: Record<string, Array<{ cids: string[]; S: Person | null; sid: string | null }>> = {};
+  const plain: Array<{ pids: string[]; cids: string[] }> = [];
   Object.values(groups).forEach((g) => {
     const hub = g.pids.length <= 2 ? g.pids.find((id) => marriages.order[id]) : undefined;
-    const H = hub ? state.people[hub] : undefined;
+    const H = hub ? tree.people[hub] : undefined;
     const sid = H && g.pids.length === 2 ? (g.pids.find((id) => id !== hub) ?? null) : null;
-    const S = sid ? (state.people[sid] ?? null) : null;
+    const S = sid ? (tree.people[sid] ?? null) : null;
     if (hub && H && (g.pids.length === 1 || (S && Math.abs(H.y - S.y) < 5))) {
       (hubGroups[hub] ??= []).push({ cids: g.cids, S, sid });
-    } else drawFamily(g);
+    } else plain.push(g);
   });
+
+  // Children bars and the vertical lines drawn so far. Two families' bars at
+  // the same height that overlap would read as one line joining both
+  // families, so each bar takes a height of its own (see freeLevel).
+  const bars: Array<{ y: number; min: number; max: number }> = [];
+  const drops: Array<{ x: number; y1: number; y2: number }> = [];
+  const clash = (y: number, min: number, max: number) =>
+    bars.some((b) => Math.abs(b.y - y) < 5 && Math.min(b.max, max) - Math.max(b.min, min) > -6);
+  /** Lines a bar at height y would cross: its own bar over others' drops, its drops through others' bars. */
+  const crossings = (y: number, min: number, max: number, ownDrops: Array<{ x: number; y1: number; y2: number }>) =>
+    drops.filter((d) => d.x > min && d.x < max && y > d.y1 && y < d.y2).length +
+    ownDrops
+      .map((d) => ({ x: d.x, y1: Math.min(d.y1, y), y2: Math.max(d.y2, y) }))
+      .reduce((n, d) => n + bars.filter((b) => d.x > b.min && d.x < b.max && b.y > d.y1 && b.y < d.y2).length, 0);
+  /** A free height between lo and hi for a bar from min to max: the one crossing
+   * the fewest lines, and of those the nearest to `want`. `ownDrops` are the
+   * family's own vertical lines, which end at the bar. */
+  const freeLevel = (
+    want: number,
+    min: number,
+    max: number,
+    lo: number,
+    hi: number,
+    ownDrops: Array<{ x: number; y1: number; y2: number }>,
+  ) => {
+    let best = want,
+      bestCost = Infinity;
+    for (let d = 0; want - d >= lo || want + d <= hi; d += 8)
+      for (const y of d ? [want - d, want + d] : [want]) {
+        if (y < lo || y > hi || clash(y, min, max)) continue;
+        const c = crossings(y, min, max, ownDrops);
+        if (c < bestCost) {
+          best = y;
+          bestCost = c;
+        }
+      }
+    return best;
+  };
+
+  // Several marriages first: their bar heights are chosen together, and the
+  // other families then fit around them, widest bar first.
   Object.entries(hubGroups).forEach(([hub, gs]) => drawMarriageLines(hub, gs));
+  const span = (g: { pids: string[]; cids: string[] }) => {
+    const xs = [...g.pids, ...g.cids].map((id) => tree.people[id]).filter(Boolean).map(cx);
+    return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  };
+  plain.sort((a, b) => span(b) - span(a)).forEach(drawFamily);
 
   // One person with several marriages: each marriage's line comes down from
   // the partner line between the two spouses (or from the spouse's own card
@@ -185,10 +235,10 @@ export function drawConnectors(): void {
     hubId: string,
     input: Array<{ cids: string[]; S: Person | null; sid: string | null }>,
   ): void {
-    const H = state.people[hubId];
+    const H = tree.people[hubId];
     const rank = marriages.order[hubId] || [];
     const all: MarriageGroup[] = input.map((g) => {
-      const kids = g.cids.map((id) => state.people[id]).filter(Boolean);
+      const kids = g.cids.map((id) => tree.people[id]).filter(Boolean);
       const order = g.sid ? rank.indexOf(g.sid) : rank.length;
       let x: number, y0: number, lo: number, hi: number;
       if (!g.S || cardsBetween(H, g.S)) {
@@ -282,6 +332,8 @@ export function drawConnectors(): void {
     });
     gs.forEach((g, a) => {
       const y = bestLv[a];
+      bars.push({ y, min: g.min, max: g.max });
+      drops.push({ x: g.x, y1: g.y0, y2: y }, ...g.kids.map((k) => ({ x: cx(k), y1: y, y2: top(k) })));
       seg(g.x, g.y0, g.x, y, GREEN);
       if (g.max > g.min) seg(g.min, y, g.max, y, GREEN);
       g.kids.forEach((k) => seg(cx(k), y, cx(k), top(k), GREEN));
@@ -289,8 +341,8 @@ export function drawConnectors(): void {
   }
 
   function drawFamily({ pids, cids }: { pids: string[]; cids: string[] }): void {
-    const parents = pids.map((id) => state.people[id]).filter(Boolean);
-    const children = cids.map((id) => state.people[id]).filter(Boolean);
+    const parents = pids.map((id) => tree.people[id]).filter(Boolean);
+    const children = cids.map((id) => tree.people[id]).filter(Boolean);
     if (!parents.length || !children.length) return;
 
     // Junction: halfway between the lowest parent bottom and the highest child top.
@@ -311,10 +363,15 @@ export function drawConnectors(): void {
     const chiXs = children.map(cx);
     const chiMinX = Math.min(...chiXs),
       chiMaxX = Math.max(...chiXs);
-    const chiBarY = jY + 20;
-    seg(coupleX, jY, coupleX, chiBarY, GREEN);
     const barMinX = Math.min(chiMinX, coupleX),
       barMaxX = Math.max(chiMaxX, coupleX);
+    // Below the parents' junction and above the children's cards. The drops
+    // are given from the bar's own end: the stem from above, the children's from below.
+    const own = [{ x: coupleX, y1: jY, y2: jY }, ...children.map((c) => ({ x: cx(c), y1: top(c), y2: top(c) }))];
+    const chiBarY = freeLevel(jY + 20, barMinX, barMaxX, jY + 6, chiTopY - 8, own);
+    bars.push({ y: chiBarY, min: barMinX, max: barMaxX });
+    drops.push({ x: coupleX, y1: jY, y2: chiBarY }, ...children.map((c) => ({ x: cx(c), y1: chiBarY, y2: top(c) })));
+    seg(coupleX, jY, coupleX, chiBarY, GREEN);
     if (barMaxX > barMinX) seg(barMinX, chiBarY, barMaxX, chiBarY, GREEN);
 
     children.forEach((c) => seg(cx(c), chiBarY, cx(c), top(c), GREEN));

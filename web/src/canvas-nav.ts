@@ -1,7 +1,7 @@
 // Moving around the tree canvas: drag to pan, pinch / Ctrl+wheel / buttons to zoom.
 
 import { el, ui } from "./state.ts";
-import { updateCanvasSize } from "./tree-view.ts";
+import { treeSize, updateCanvasSize } from "./tree-view.ts";
 
 const ZOOM_MIN = 0.2,
   ZOOM_MAX = 2;
@@ -55,7 +55,7 @@ export function initCanvasZoom(): void {
       e.preventDefault();
       const dy = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY;
       const step = Math.max(-60, Math.min(60, dy));
-      zoomTo(ui.zoom * Math.exp(-step * 0.004), e.clientX, e.clientY);
+      zoomGesture(current().z * Math.exp(-step * 0.004), e.clientX, e.clientY);
     },
     { passive: false },
   );
@@ -73,11 +73,12 @@ export function initCanvasZoom(): void {
       if (e.touches.length !== 2) return;
       const r = wrap.getBoundingClientRect();
       const c = centre(e.touches);
+      const v = current();
       pinch = {
         d: spread(e.touches) || 1,
-        z: ui.zoom,
-        tx: (c.x - r.left + wrap.scrollLeft) / ui.zoom,
-        ty: (c.y - r.top + wrap.scrollTop) / ui.zoom,
+        z: v.z,
+        tx: (c.x - r.left + v.left) / v.z,
+        ty: (c.y - r.top + v.top) / v.z,
       };
     },
     { passive: true },
@@ -88,12 +89,14 @@ export function initCanvasZoom(): void {
       if (!pinch || e.touches.length !== 2) return;
       if (e.cancelable) e.preventDefault();
       const c = centre(e.touches);
-      zoomTo((pinch.z * spread(e.touches)) / pinch.d, c.x, c.y, pinch.tx, pinch.ty);
+      zoomGesture((pinch.z * spread(e.touches)) / pinch.d, c.x, c.y, pinch.tx, pinch.ty);
     },
     { passive: false },
   );
   const endPinch = (e: TouchEvent) => {
-    if (e.touches.length < 2) pinch = null;
+    if (!pinch || e.touches.length >= 2) return;
+    pinch = null;
+    endZoomGesture();
   };
   wrap.addEventListener("touchend", endPinch);
   wrap.addEventListener("touchcancel", endPinch);
@@ -103,15 +106,16 @@ export function initCanvasZoom(): void {
   let gestureZoom: number | null = null;
   wrap.addEventListener("gesturestart", (e) => {
     e.preventDefault();
-    gestureZoom = pinch ? null : ui.zoom;
+    gestureZoom = pinch ? null : current().z;
   });
   wrap.addEventListener("gesturechange", (e) => {
     e.preventDefault();
     const g = e as GestureEvent;
-    if (gestureZoom !== null && !pinch) zoomTo(gestureZoom * g.scale, g.clientX, g.clientY);
+    if (gestureZoom !== null && !pinch) zoomGesture(gestureZoom * g.scale, g.clientX, g.clientY);
   });
   wrap.addEventListener("gestureend", (e) => {
     e.preventDefault();
+    if (gestureZoom !== null) endZoomGesture();
     gestureZoom = null;
   });
 }
@@ -127,9 +131,87 @@ export function resetZoom(): void {
   zoomTo(1);
 }
 
+// ── Zoom gestures ──
+// While a pinch or Ctrl+wheel zoom is going on, the tree is only moved and
+// scaled on the graphics card (a preview): nothing is laid out or drawn
+// again while the fingers move, which keeps slow phones smooth. When the
+// gesture stops the zoom is applied for real: the scroll area takes the new
+// size and the tree is drawn sharp at the new scale.
+
+interface ViewState {
+  z: number;
+  left: number;
+  top: number;
+}
+let preview: ViewState | null = null;
+let frame = 0;
+let settle = 0;
+
+/** The zoom and scroll position the view has, or will have once the gesture is applied. */
+function current(): ViewState {
+  const wrap = el("view-canvas");
+  return preview ?? { z: ui.zoom, left: wrap.scrollLeft, top: wrap.scrollTop };
+}
+
+/** The view at zoom z that keeps tree point (tx, ty) under viewport point (vx, vy),
+ * kept inside the scrollable area the way the browser keeps a scroll position. */
+function viewAt(z: number, vx: number, vy: number, tx: number, ty: number): ViewState {
+  const wrap = el("view-canvas");
+  z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+  const size = treeSize();
+  const clamp = (v: number, max: number) => Math.min(Math.max(0, v), Math.max(0, max));
+  return {
+    z,
+    left: clamp(tx * z - vx, size.width * z - wrap.clientWidth),
+    top: clamp(ty * z - vy, size.height * z - wrap.clientHeight),
+  };
+}
+
+/** Zoom to z keeping the tree point under (clientX, clientY) there; as a preview until the gesture ends. */
+function zoomGesture(z: number, clientX: number, clientY: number, treeX?: number, treeY?: number): void {
+  const wrap = el("view-canvas");
+  const r = wrap.getBoundingClientRect();
+  const vx = clientX - r.left,
+    vy = clientY - r.top;
+  const cur = current();
+  preview = viewAt(z, vx, vy, treeX ?? (vx + cur.left) / cur.z, treeY ?? (vy + cur.top) / cur.z);
+  // Events come faster than the screen redraws: show only the latest, once per frame.
+  if (!frame) frame = requestAnimationFrame(showPreview);
+  // A wheel zoom has no end event; it is applied once the wheel rests.
+  clearTimeout(settle);
+  settle = window.setTimeout(endZoomGesture, 200);
+}
+
+function showPreview(): void {
+  frame = 0;
+  if (!preview) return;
+  const wrap = el("view-canvas");
+  const c = el("tree-canvas");
+  const dx = wrap.scrollLeft - preview.left,
+    dy = wrap.scrollTop - preview.top;
+  c.style.willChange = "transform";
+  c.style.transform = `translate(${dx}px, ${dy}px) scale(${preview.z})`;
+}
+
+/** Apply the previewed zoom for real. */
+function endZoomGesture(): void {
+  clearTimeout(settle);
+  cancelAnimationFrame(frame);
+  frame = 0;
+  if (!preview) return;
+  const v = preview;
+  preview = null;
+  const wrap = el("view-canvas");
+  ui.zoom = v.z;
+  updateCanvasSize();
+  wrap.scrollLeft = v.left;
+  wrap.scrollTop = v.top;
+  el("tree-canvas").style.willChange = "";
+}
+
 // Zoom so the tree point under (clientX, clientY) stays under it, like a map.
-// A pinch passes the tree point it started on, so moving the fingers also pans.
 export function zoomTo(z: number, clientX?: number, clientY?: number, treeX?: number, treeY?: number): void {
+  endZoomGesture();
   const wrap = el("view-canvas");
   const r = wrap.getBoundingClientRect();
   const vx = (clientX ?? r.left + wrap.clientWidth / 2) - r.left;
@@ -150,7 +232,6 @@ export function applyZoom(): void {
   const box = el("zoom-box");
   box.style.width = c.offsetWidth * ui.zoom + "px";
   box.style.height = c.offsetHeight * ui.zoom + "px";
-  // The grid grows and shrinks with the tree.
-  const g = 40 * ui.zoom + "px";
-  el("view-canvas").style.backgroundSize = g + " " + g;
+  // Keeps the grid lines 1px on screen.
+  c.style.setProperty("--zoom", String(ui.zoom));
 }

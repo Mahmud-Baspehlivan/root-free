@@ -17,10 +17,12 @@ import {
   triggerPhotoUpload,
   viewPerson,
 } from "./people.ts";
-import { applyStatic, lang, setLang } from "./i18n.ts";
+import { expandAll, toggleBranch } from "./collapse.ts";
+import { applyStatic, lang, setLang, t } from "./i18n.ts";
 import { initRelatives, openAddRelative, pickRelation, saveRelatives } from "./relatives.ts";
-import { closeModal, el, ui } from "./state.ts";
-import { hasUnsavedChanges, loadState } from "./sync.ts";
+import { goToPerson, initSearch, openSearch } from "./search.ts";
+import { closeModal, el, showToast, ui } from "./state.ts";
+import { hasUnsavedChanges, loadState, watchForChanges } from "./sync.ts";
 import { render, switchView } from "./tree-view.ts";
 import { renderGenView, renderListView } from "./views.ts";
 import type { RelType, View } from "./types.ts";
@@ -66,7 +68,27 @@ const actions: Record<string, (target: HTMLElement, event: MouseEvent) => void> 
   toggleDark,
   toggleLang,
   toggleMenu: () => setMenu(!el("header-menu").classList.contains("open")),
+  openSearch,
+  goToPerson: (t) => goToPerson(t.dataset.id!),
+  toggleBranch: (t) => keepInPlace(t.dataset.id!, () => toggleBranch(t.dataset.id!)),
+  expandAll: () => {
+    expandAll();
+    render();
+  },
 };
+
+// Opening or closing a branch lays the tree out again; the card that was
+// clicked stays where it was on the screen, so the view does not jump.
+function keepInPlace(id: string, change: () => void): void {
+  const before = document.getElementById("card-" + id)?.getBoundingClientRect();
+  change();
+  render();
+  const after = document.getElementById("card-" + id)?.getBoundingClientRect();
+  if (!before || !after) return;
+  const wrap = el("view-canvas");
+  wrap.scrollLeft += after.left - before.left;
+  wrap.scrollTop += after.top - before.top;
+}
 
 document.addEventListener("click", (e) => {
   const target = (e.target as Element).closest<HTMLElement>("[data-action]");
@@ -120,6 +142,21 @@ function initDark(): void {
 applyStatic();
 initDark();
 initRelatives();
+initSearch();
 initCanvasPan();
 initCanvasZoom();
 void loadState();
+// Others' changes come in while the page is free: no dialog open, no card
+// being dragged, no zoom gesture under way.
+watchForChanges(
+  () =>
+    ![...document.querySelectorAll<HTMLElement>(".modal-overlay")].some((m) => m.style.display === "flex") &&
+    !document.querySelector(".person-card.dragging") &&
+    !el("tree-canvas").style.willChange,
+  () => {
+    render();
+    if (ui.view === "gen") renderGenView();
+    if (ui.view === "list") renderListView();
+    showToast(t("remoteUpdated"));
+  },
+);

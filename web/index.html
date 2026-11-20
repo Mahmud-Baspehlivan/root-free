@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- A family's names and dates: not for search engines. -->
+    <meta name="robots" content="noindex, nofollow" />
     <title>RootFree — Family Tree</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -107,6 +109,7 @@
       <div class="canvas-wrap" id="view-canvas">
         <div id="zoom-box">
         <div id="tree-canvas">
+          <div id="grid" aria-hidden="true"></div>
           <div class="welcome" id="welcome-msg">
             <div class="welcome-icon">
               <svg
@@ -154,6 +157,29 @@
     </div>
     <!-- .app -->
 
+    <!-- SEARCH (see search.ts) -->
+    <div class="search" id="search" role="search">
+      <button class="search-toggle" type="button" data-action="openSearch" data-i18n-title="search" title="Search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-4-4" />
+        </svg>
+      </button>
+      <input
+        id="search-input"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="search-results"
+        aria-expanded="false"
+        data-i18n-placeholder="searchPh"
+        placeholder="Find someone…"
+      />
+      <div id="search-results" role="listbox" hidden></div>
+    </div>
+
     <!-- TOOLBAR -->
     <div class="toolbar" id="main-toolbar">
       <button class="tb-btn primary" id="tb-add" data-action="openAddPerson" data-i18n="addPerson">
@@ -162,6 +188,9 @@
       <div class="tb-sep"></div>
       <button class="tb-btn" data-action="genLayout" data-i18n="genLayout">Generation Layout</button>
       <button class="tb-btn" data-action="gridLayout" data-i18n="grid">Grid</button>
+      <button class="tb-btn" id="expand-all" data-action="expandAll" data-i18n="expandAll" style="display: none">
+        Show all
+      </button>
       <div class="tb-sep"></div>
       <button class="tb-btn" data-action="zoomIn">+</button>
       <button class="tb-btn" data-action="zoomOut">−</button>

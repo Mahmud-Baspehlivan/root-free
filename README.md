@@ -10,7 +10,7 @@ A family tree app for one family, shared by everyone who has the link. It starte
 - People with name, photo, birth and death years, birthplace, occupation and notes
 - Parent, child, partner and sibling connections
 - Drag cards freely, or arrange them by generation or in a grid with one click
-- GEDCOM 5.5.1 import and export, JSON backup and restore
+- GEDCOM 5.5.1 import and export, JSON backup and restore. Export keeps every link: children of a single parent, and each marriage's own children
 
 **Generation layout**
 - Partners stand side by side and each family's children stay together under their parents
@@ -20,6 +20,15 @@ A family tree app for one family, shared by everyone who has the link. It starte
 **Adding relatives**
 - "+" on any card (or "+ Relative" in a person's details) adds a father, mother, spouse, son, daughter, brother or sister and makes the connections at once
 - Several children or siblings in one go ("Hasan, Yusuf, Seher"); for someone married more than once it asks which marriage
+
+**Closing branches**
+- "▾" under a parent's card hides everyone below them, and the people who married into those families; the card then shows "▸ 36" and opens it again. The rest of the tree closes up, for viewing only: the saved positions do not change.
+- Closing one spouse of someone married twice hides only that marriage's children.
+- Each device remembers its own closed branches; "Show all" opens everything.
+
+**Finding someone**
+- The search box (top left; 🔍 on phones; "/" jumps to it) finds people as you type. Turkish letters and case do not matter ("baspehlivan" finds "BAŞPEHLİVAN"), and each result shows years, place and parents, so people with the same name can be told apart.
+- Picking someone scrolls the tree to their card and lights it up, opening a closed branch if they are in one.
 
 **Moving around**
 - Drag empty space to pan
@@ -32,9 +41,9 @@ A family tree app for one family, shared by everyone who has the link. It starte
 
 **Shared data**
 - The tree lives on the server. Every change is saved straight away, and only the changed fields are sent, so two people editing different things never overwrite each other.
-- Changes made by others show up when the page is reloaded.
+- Changes made by others arrive by themselves: an open page checks every 15 seconds (and when you come back to the tab) and takes the new tree when nothing here is unsaved and no dialog is open.
 
-> **No login.** Anyone with the link can view and change the tree. Keep the link within the family.
+> **No login.** Anyone with the link can view and change the tree. Keep the link within the family. Search engines are asked not to list the site (`robots.txt`, a `noindex` tag and header).
 
 ## Running locally
 
@@ -89,7 +98,7 @@ API:
 
 | | |
 |---|---|
-| `GET /api/tree` | `{ people: { id: {...} }, relationships: [{ a, b, type }] }`, relationships in the order they were added |
+| `GET /api/tree` | `{ people: { id: {...} }, relationships: [{ a, b, type }] }`, relationships in the order they were added; with an ETag (304 when unchanged) |
 | `POST /api/changes` | `{ people: { upsert: [...], delete: [...] }, relationships: { add: [...], delete: [...] } }`, applied atomically |
 | `GET /api/health` | `{ ok: true }` |
 

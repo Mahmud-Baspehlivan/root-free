@@ -1,12 +1,14 @@
 // RootFree server: serves the built app and keeps the tree in SQLite.
 //
-//   GET  /api/tree     the whole tree: { people: { id: {...} }, relationships: [...] }
+//   GET  /api/tree     the whole tree: { people: { id: {...} }, relationships: [...] },
+//                      with an ETag, so a page checking for changes gets 304 when there are none
 //   POST /api/changes  apply a batch of changes (see db.ts)
 //   GET  /api/health   for the container health check
 //
 // Environment: PORT (default 3000), DB_PATH (default data/rootfree.db),
 // PUBLIC_DIR (default dist, the output of `npm run build`).
 
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { mkdir, readFile, stat } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
@@ -53,6 +55,8 @@ export async function startServer({
   const root = resolve(publicDir);
 
   const server = createServer(async (req, res) => {
+    // A family's names and dates: keep every page and answer out of search engines.
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
       if (url.pathname.startsWith("/api/")) await handleApi(req, res, url.pathname, db);
@@ -84,7 +88,7 @@ export async function startServer({
 
 async function handleApi(req: IncomingMessage, res: ServerResponse, path: string, db: TreeDatabase): Promise<void> {
   if (path === "/api/health" && req.method === "GET") return sendJson(res, 200, { ok: true });
-  if (path === "/api/tree" && req.method === "GET") return sendJson(res, 200, db.getTree());
+  if (path === "/api/tree" && req.method === "GET") return sendTree(req, res, db);
   if (path === "/api/changes" && req.method === "POST") {
     const text = await readBody(req);
     let body: unknown;
@@ -146,6 +150,26 @@ function readBody(req: IncomingMessage): Promise<string> {
     );
     req.on("error", fail);
   });
+}
+
+// The tree with an ETag that changes whenever the tree does. Open pages ask
+// every few seconds whether anything changed; when nothing did, the answer is
+// an empty 304 instead of the whole tree.
+function sendTree(req: IncomingMessage, res: ServerResponse, db: TreeDatabase): void {
+  const body = JSON.stringify(db.getTree());
+  const etag = '"' + createHash("sha256").update(body).digest("base64url").slice(0, 27) + '"';
+  const headers = { ETag: etag, "Cache-Control": "no-cache" };
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, headers);
+    res.end();
+    return;
+  }
+  res.writeHead(200, {
+    ...headers,
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+  });
+  res.end(body);
 }
 
 function sendJson(res: ServerResponse, status: number, data: unknown): void {

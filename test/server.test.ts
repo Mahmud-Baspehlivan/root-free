@@ -156,6 +156,26 @@ test("invalid changes are rejected and nothing of the batch is saved", async () 
   assert.deepEqual(await tree(), { people: {}, relationships: [] });
 });
 
+test("every answer tells search engines not to list it", async () => {
+  for (const path of ["/", "/assets/app.js", "/api/tree", "/api/health", "/nope.html"])
+    assert.equal((await fetch(base + path)).headers.get("x-robots-tag"), "noindex, nofollow", path);
+});
+
+test("the tree has an ETag: 304 while nothing changed, a new one after a change", async () => {
+  await reset();
+  const first = await fetch(base + "/api/tree");
+  const etag = first.headers.get("etag")!;
+  assert.ok(etag);
+  const same = await fetch(base + "/api/tree", { headers: { "If-None-Match": etag } });
+  assert.equal(same.status, 304);
+  assert.equal(await same.text(), "");
+  await ok({ people: { upsert: [{ id: "new", first: "HAYRİYE" }] } });
+  const changed = await fetch(base + "/api/tree", { headers: { "If-None-Match": etag } });
+  assert.equal(changed.status, 200);
+  assert.notEqual(changed.headers.get("etag"), etag);
+  assert.equal(((await changed.json()) as Tree).people.new.first, "HAYRİYE");
+});
+
 test("too large a request is refused", async () => {
   const photo = "data:image/png;base64," + "A".repeat(26 * 1024 * 1024);
   const res = await change({ people: { upsert: [{ id: "big", photo }] } });

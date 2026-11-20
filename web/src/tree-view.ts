@@ -1,6 +1,7 @@
 // The tree canvas: switching views, drawing the person cards, dragging them.
 
 import { applyZoom } from "./canvas-nav.ts";
+import { branchState, hasClosedBranches, isPartialView, refreshView, shownTree } from "./collapse.ts";
 import { drawConnectors } from "./connectors.ts";
 import { t } from "./i18n.ts";
 import { marriageInfo } from "./layout.ts";
@@ -15,8 +16,11 @@ export function switchView(v: View): void {
     el("view-" + n).style.display = n === v ? "block" : "none";
     el("tab-" + n).classList.toggle("active", n === v);
   }
-  el("main-toolbar").style.display = v === "canvas" ? "flex" : "none";
-  el("main-legend").style.display = v === "canvas" ? "block" : "none";
+  // Shown again by clearing the override, so the stylesheet decides (the
+  // legend stays hidden on phones).
+  el("main-toolbar").style.display = v === "canvas" ? "" : "none";
+  el("main-legend").style.display = v === "canvas" ? "" : "none";
+  el("search").style.display = v === "canvas" ? "" : "none";
   if (v === "gen") renderGenView();
   if (v === "list") renderListView();
 }
@@ -24,11 +28,14 @@ export function switchView(v: View): void {
 export function render(): void {
   const canvas = el("tree-canvas");
   canvas.querySelectorAll(".person-card").forEach((e) => e.remove());
-  const ids = Object.keys(state.people);
-  el("welcome-msg").style.display = ids.length ? "none" : "block";
+  // With closed branches only part of the tree is shown, at its own positions.
+  const shown = refreshView();
+  el("welcome-msg").style.display = Object.keys(state.people).length ? "none" : "block";
+  el("expand-all").style.display = hasClosedBranches() ? "" : "none";
+  canvas.classList.toggle("partial", isPartialView());
   const { badge } = marriageInfo();
-  ids.forEach((id) => {
-    const p = state.people[id];
+  Object.keys(shown.people).forEach((id) => {
+    const p = shown.people[id];
     const gc = gClass(p.gender);
     const card = document.createElement("div");
     card.className = "person-card";
@@ -49,7 +56,7 @@ export function render(): void {
 <div class="card-footer">
   <button class="card-action" data-action="viewPerson" data-id="${esc(id)}">${esc(t("view"))}</button>
   <button class="card-action primary" data-action="openAddRel" data-id="${esc(id)}">${esc(t("connect"))}</button>
-</div>`;
+</div>${branchButton(id)}`;
     makeDraggable(card, id);
     canvas.appendChild(card);
   });
@@ -57,9 +64,17 @@ export function render(): void {
   requestAnimationFrame(() => requestAnimationFrame(drawConnectors));
 }
 
+/** "▾" under a parent's card closes the branch below; "▸ 12" shows how many are hidden and opens it. */
+function branchButton(id: string): string {
+  const b = branchState(id);
+  if (!b) return "";
+  const title = b.open ? t("hideBranch") : t("showBranch", { n: b.count });
+  return `<button class="card-branch${b.open ? "" : " closed"}" data-action="toggleBranch" data-id="${esc(id)}" title="${esc(title)}" aria-label="${esc(title)}" aria-expanded="${b.open}">${b.open ? "▾" : `▸ ${b.count}`}</button>`;
+}
+
 /** Scroll the canvas to the top row of the tree, so it is not opened on empty space. */
 export function revealTree(): void {
-  const people = Object.values(state.people);
+  const people = Object.values(shownTree().people);
   if (!people.length) return;
   const first = people.reduce((a, b) => ((b.y || 0) < (a.y || 0) || ((b.y || 0) === (a.y || 0) && (b.x || 0) < (a.x || 0)) ? b : a));
   const wrap = el("view-canvas");
@@ -67,21 +82,43 @@ export function revealTree(): void {
   wrap.scrollTop = Math.max(0, (first.y || 0) * ui.zoom - 24);
 }
 
+/** The area the cards take up, unzoomed. */
+export function treeSize(): { width: number; height: number } {
+  let width = 900,
+    height = 600;
+  Object.values(shownTree().people).forEach((p) => {
+    width = Math.max(width, (p.x || 0) + 220);
+    height = Math.max(height, (p.y || 0) + 280);
+  });
+  return { width, height };
+}
+
 export function updateCanvasSize(): void {
   const canvas = el("tree-canvas");
-  let maxX = 900,
-    maxY = 600;
-  Object.values(state.people).forEach((p) => {
-    maxX = Math.max(maxX, (p.x || 0) + 220);
-    maxY = Math.max(maxY, (p.y || 0) + 280);
-  });
+  const size = treeSize();
   // Always cover the visible area, whatever the zoom.
   const view = el("view-canvas");
-  maxX = Math.max(maxX, view.clientWidth / ui.zoom);
-  maxY = Math.max(maxY, view.clientHeight / ui.zoom);
+  const maxX = Math.max(size.width, view.clientWidth / ui.zoom);
+  const maxY = Math.max(size.height, view.clientHeight / ui.zoom);
   canvas.style.minWidth = maxX + "px";
   canvas.style.minHeight = maxY + "px";
+  drawGrid(maxX, maxY);
   applyZoom();
+}
+
+const GRID = 40;
+
+/** One line every 40px across the canvas; redrawn only when the canvas needs more or fewer lines. */
+function drawGrid(width: number, height: number): void {
+  const grid = el("grid");
+  const cols = Math.ceil(width / GRID),
+    rows = Math.ceil(height / GRID);
+  if (grid.dataset.size === cols + "x" + rows) return;
+  grid.dataset.size = cols + "x" + rows;
+  let html = "";
+  for (let i = 0; i < cols; i++) html += `<i class="gx" style="left:${i * GRID}px"></i>`;
+  for (let i = 0; i < rows; i++) html += `<i class="gy" style="top:${i * GRID}px"></i>`;
+  grid.innerHTML = html;
 }
 
 function makeDraggable(card: HTMLElement, id: string): void {
@@ -92,6 +129,8 @@ function makeDraggable(card: HTMLElement, id: string): void {
     startY = 0;
   card.addEventListener("mousedown", (e) => {
     if ((e.target as Element).tagName === "BUTTON") return;
+    // With closed branches the positions are only for viewing: no dragging.
+    if (isPartialView()) return;
     e.preventDefault();
     const p = state.people[id];
     const wrap = el("view-canvas");

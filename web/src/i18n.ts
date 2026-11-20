@@ -68,6 +68,16 @@ const en = {
   siblingOfSub: "Brother or sister",
   connectTo: "Connect to",
   connect: "Connect",
+  // search
+  search: "Find someone",
+  searchPh: "Find someone…",
+  searchNone: "No one by that name",
+  searchParents: "parents: {names}",
+  searchSpouse: "spouse: {names}",
+  // closing branches
+  hideBranch: "Hide the family below",
+  showBranch: "Show {n} hidden people",
+  expandAll: "Show all",
   // add a relative
   addRelative: "Add a relative",
   addRelativeOf: "Add a relative of {name}",
@@ -172,6 +182,8 @@ const en = {
   cannotParse: "Could not parse file.",
   invalidBackup: "Invalid RootFree backup file.",
   confirmMerge: "Merge imported data with current tree?",
+  confirmGedMerge:
+    "The tree already has {n} people. The people in the file will be added to them; anyone who is in both will be there twice. To load the file instead of the current tree, use Delete All first. Add them?",
   merged: "Data imported and merged",
   gedcomInfo: "GEDCOM (.ged) is the standard family tree format used by Ancestry, MyHeritage, FamilySearch, and most genealogy apps. Export from any of those and import here.",
   selectGed: "Select .ged file",
@@ -185,6 +197,7 @@ const en = {
   // server
   loadFailed: "Could not load the tree from the server. Reload the page to try again.",
   saveFailed: "Could not save — retrying in a few seconds",
+  remoteUpdated: "Updated with changes made by someone else",
 };
 
 export type Key = keyof typeof en;
@@ -247,6 +260,14 @@ const tr: Record<Key, string> = {
   siblingOfSub: "Erkek ya da kız kardeş",
   connectTo: "Bağlanacak kişi",
   connect: "Bağla",
+  search: "Kişi ara",
+  searchPh: "Kişi ara…",
+  searchNone: "Bu isimde kimse yok",
+  searchParents: "anne-baba: {names}",
+  searchSpouse: "eşi: {names}",
+  hideBranch: "Altındaki aileyi gizle",
+  showBranch: "Gizlenen {n} kişiyi göster",
+  expandAll: "Hepsini aç",
   addRelative: "Akraba ekle",
   addRelativeOf: "{name} için akraba ekle",
   addWhatOf: "{name} için {what} ekle",
@@ -346,6 +367,8 @@ const tr: Record<Key, string> = {
   cannotParse: "Dosya okunamadı.",
   invalidBackup: "Geçerli bir RootFree yedeği değil.",
   confirmMerge: "Yedekteki kişiler mevcut ağaca eklensin mi?",
+  confirmGedMerge:
+    "Ağaçta zaten {n} kişi var. Dosyadakiler bunlara eklenecek; ikisinde de olan kişiler iki kez görünür. Ağacı dosyadakiyle değiştirmek için önce Tümünü sil'i kullanın. Eklensin mi?",
   merged: "Yedek eklendi",
   gedcomInfo: "GEDCOM (.ged), Ancestry, MyHeritage, FamilySearch ve çoğu soy ağacı uygulamasının kullandığı standart dosya biçimidir. Bunlardan birinden dışa aktarıp buraya yükleyin.",
   selectGed: ".ged dosyası seçin",
@@ -358,6 +381,7 @@ const tr: Record<Key, string> = {
   gedExported: "GEDCOM dışa aktarıldı",
   loadFailed: "Ağaç sunucudan yüklenemedi. Tekrar denemek için sayfayı yenileyin.",
   saveFailed: "Kaydedilemedi — birkaç saniye içinde tekrar denenecek",
+  remoteUpdated: "Başka birinin yaptığı değişiklikler geldi",
 };
 
 const STRINGS: Record<Lang, Record<Key, string>> = { en, tr };
